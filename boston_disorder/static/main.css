@@ -1,0 +1,66 @@
+body {
+padding: 0;
+margin: 0;
+font-family: Lucida Grande, Helvetica, Arial, sans-serif;
+font-size: 12px;
+height: 100%;
+}
+html { height: 100%;}
+
+#map_canvas { 
+    height: 80%;
+    margin-top: 60px;
+}
+
+#chart_div {
+	width:900px;
+	height: 500px;
+	margin-top: 50px;
+}
+
+#table_div{
+	height: 20%;
+}
+
+
+ul.drop a { display:block; color: #fff; font-family: Verdana; font-size: 14px; text-decoration: none;}
+ul.drop, ul.drop li, ul.drop ul { list-style: none; margin: 0; padding: 0; border: 1px solid #fff; background: #555; color: #fff;}
+ul.drop { position: relative; z-index: 597; float: left; }
+ul.drop li { float: left; line-height: 1.3em; vertical-align: middle; zoom: 1; padding: 5px 10px; }
+ul.drop li.hover, ul.drop li:hover { position: relative; z-index: 599; cursor: default; background: #1e7c9a; }
+ul.drop ul { visibility: hidden; position: absolute; top: 100%; left: 0; z-index: 598; width: 195px; background: #555; border: 1px solid #fff; }
+ul.drop ul li { float: none; }
+ul.drop ul ul { top: -2px; left: 100%; }
+ul.drop li:hover > ul { visibility: visible }
+
+#navigation {
+position: fixed;
+top: 0;
+width: 100%;
+color: #ffffff;
+/*height: 35px;*/
+text-align: center;
+padding: 15px 0px 15px 0px;
+/* Adds shadow to the bottom of the bar */
+-webkit-box-shadow: 0px 0px 8px 0px #000000;
+-moz-box-shadow: 0px 0px 8px 0px #000000;
+box-shadow: 0px 0px 8px 0px #000000;
+/* Adds the transparent background */
+background-color: rgba(1, 1, 1, 0.8);
+color: rgba(1, 1, 1, 0.8);
+z-index: 599
+}
+#navigation a {
+font-size: 14px;
+padding-left: 15px;
+padding-right: 15px;
+color: white;
+text-decoration: none;
+}
+
+#navigation a:hover {
+color: grey;
+} 
+#nav {
+	margin-left: 50px;
+}

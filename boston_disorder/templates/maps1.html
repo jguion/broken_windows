@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="/static/main.css" type="text/css" />
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDqubrU5ZLOeVplgi--fxTMCs0zNvNjlEI&sensor=true">
+    </script>
+    <script type="text/javascript" src="http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/markerclusterer.js">
+    </script>
+    <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="http://code.jquery.com/ui/1.10.0/jquery-ui.js"></script>
+    <script type='text/javascript' src='/static/knockout-2.2.1.js'></script>
+    {% load compress %}
+    {% compress js %}
+    <script type="text/coffeescript" charset="utf-8" src="/static/utils.coffee" />
+    {% endcompress %}
+    <script type="text/javascript">
+      google.load('visualization', '1', {packages:['table']});
+      var map;
+      var markersArray;
+      var geocoder;
+      var infowindow;
+
+      function initialize() {
+        var data = {{data|safe}}
+        var table_data = new google.visualization.DataTable();
+        table_data.addColumn('date', 'Date');
+        table_data.addColumn('string', 'Description');
+        var mapOptions = {
+          center: new google.maps.LatLng(42.328, -71.060),
+          zoom: 12,
+          mapTypeId: google.maps.MapTypeId.TERRAIN,
+          gridSize: 30
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+        infowindow = new google.maps.InfoWindow();
+        markersArray = new Array();
+        var table_rows = new Array();
+        geocoder = new google.maps.Geocoder();
+        for (var i=0;i<data.locations.length;i++){
+          info =  data.locations[i];
+          if(info.latitude && info.longitude){
+            ll = new google.maps.LatLng(info.latitude, info.longitude, true);
+            addMarker(ll, info.date+" "+info.desc);
+            table_rows.push([new Date(info.date), info.desc]);
+          }//else if(info.address){
+            //codeAddress(info.address)
+          //}
+        }
+        table_data.addRows(table_rows);
+        var mc = new MarkerClusterer(map, markersArray, mapOptions);
+        var table = new google.visualization.Table(document.getElementById('table_div'));
+        table.draw(table_data, {showRowNumber: true, page:true, pageSize:500});
+
+      }
+      function addMarker(location, desc) {
+        marker = new google.maps.Marker({
+          position: location,
+          //map: map,
+          //title:desc
+        });
+        var fn = markerClickFunction(location,desc);
+        google.maps.event.addListener(marker, 'click', fn);
+        markersArray.push(marker);
+      }
+
+      function markerClickFunction(location, desc){
+        return function(e){
+          var infoHtml = '<div>'+desc+'</div>';
+          infowindow.setContent(infoHtml);
+          infowindow.setPosition(location);
+          infowindow.open(map);
+        }
+      }
+
+      // Removes the overlays from the map, but keeps them in the array
+      function clearOverlays() {
+        if (markersArray) {
+          for (i in markersArray) {
+            markersArray[i].setMap(null);
+          }
+        }
+      }
+
+      // Shows any overlays currently in the array
+      function showOverlays() {
+        if (markersArray) {
+          for (i in markersArray) {
+            markersArray[i].setMap(map);
+          }
+        }
+      }
+
+      // Deletes all markers in the array by removing references to them
+      function deleteOverlays() {
+        if (markersArray) {
+          for (i in markersArray) {
+            markersArray[i].setMap(null);
+          }
+          markersArray.length = 0;
+        }
+      }
+
+      function codeAddress(address) {
+        //var address = document.getElementById("address").value;
+        geocoder.geocode( { 'address': address}, function(results, status) {
+          if (status == google.maps.GeocoderStatus.OK) {
+            map.setCenter(results[0].geometry.location);
+            var marker = new google.maps.Marker({
+                map: map,
+                position: results[0].geometry.location
+            });
+          } else {
+            alert("Geocode was not successful for the following reason: " + status);
+          }
+        });
+      }
+
+      function getLatLong(address) {
+        var geocoder = new google.maps.Geocoder();
+        var result = "";
+        geocoder.geocode( { 'address': address}, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                result[lat] = results[0].geometry.location.Pa;
+                result[lng] = results[0].geometry.location.Qa;
+            } else {
+                result = "Unable to find address: " + status;
+            }
+            storeResult(result);
+        });
+        }
+    </script>
+  </head>
+  <body onload="initialize()">
+    <div id="navigation">
+        <a href="/boston/map/911_calls?f_priority=1">911 Calls</a>
+        <a href="/boston/map/inspection_violations">Inspection Violations</a>
+        <a href="/boston/map/fire">Fires</a>
+        <a href="/boston/map/crm">CRM</a>
+        <input id="change_map" type="button" value="Change Map">
+        <!--<form id="filter" method="post">
+          {% csrf_token %}
+          <input id="filter_input" type="text" placeholder="Add Filter">
+          <input id="save_filter" type="submit" value="Add Filter">
+        </form>-->
+    </div>
+    <div id="map_canvas"></div>
+    <div id='table_div'></div>
+  </body>
+</html>

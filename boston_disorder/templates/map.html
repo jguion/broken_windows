@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="/static/main.css" type="text/css" />
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDqubrU5ZLOeVplgi--fxTMCs0zNvNjlEI&sensor=true&libraries=visualization,geometry">
+    </script>
+    <script type="text/javascript" src="http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/markerclusterer.js">
+    </script>
+    <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+    <script type='text/javascript' src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script type='text/javascript' src="http://code.jquery.com/ui/1.10.0/jquery-ui.js"></script>
+    <script type='text/javascript' src='/static/knockout-2.2.1.js'></script>
+    {% load compress %}
+    {% compress js %}
+    <script type="text/coffeescript" charset="utf-8" src="/static/utils.coffee" />
+    {% endcompress %}
+    <script type="text/javascript">
+      google.load('visualization', '1', {packages:['table']});
+      var map;
+      var markersArray;
+      var geocoder;
+      var infowindow;
+      var data = {{data|safe}}
+
+      var TILE_SIZE = 256;
+
+      //Mercator --BEGIN--
+      function bound(value, opt_min, opt_max) {
+          if (opt_min !== null) value = Math.max(value, opt_min);
+          if (opt_max !== null) value = Math.min(value, opt_max);
+          return value;
+      }
+
+      function degreesToRadians(deg) {
+          return deg * (Math.PI / 180);
+      }
+
+      function radiansToDegrees(rad) {
+          return rad / (Math.PI / 180);
+      }
+
+      function MercatorProjection() {
+          this.pixelOrigin_ = new google.maps.Point(TILE_SIZE / 2,
+          TILE_SIZE / 2);
+          this.pixelsPerLonDegree_ = TILE_SIZE / 360;
+          this.pixelsPerLonRadian_ = TILE_SIZE / (2 * Math.PI);
+      }
+
+      MercatorProjection.prototype.fromLatLngToPoint = function (latLng,
+      opt_point) {
+          var me = this;
+          var point = opt_point || new google.maps.Point(0, 0);
+          var origin = me.pixelOrigin_;
+
+          point.x = origin.x + latLng.lng() * me.pixelsPerLonDegree_;
+
+          // NOTE(appleton): Truncating to 0.9999 effectively limits latitude to
+          // 89.189.  This is about a third of a tile past the edge of the world
+          // tile.
+          var siny = bound(Math.sin(degreesToRadians(latLng.lat())), - 0.9999,
+          0.9999);
+          point.y = origin.y + 0.5 * Math.log((1 + siny) / (1 - siny)) * -me.pixelsPerLonRadian_;
+          return point;
+      };
+
+      MercatorProjection.prototype.fromPointToLatLng = function (point) {
+          var me = this;
+          var origin = me.pixelOrigin_;
+          var lng = (point.x - origin.x) / me.pixelsPerLonDegree_;
+          var latRadians = (point.y - origin.y) / -me.pixelsPerLonRadian_;
+          var lat = radiansToDegrees(2 * Math.atan(Math.exp(latRadians)) - Math.PI / 2);
+          return new google.maps.LatLng(lat, lng);
+      };
+
+      //Mercator --END--
+
+
+      function initialize() {
+        //var data = {{data|safe}}
+        var table_data = new google.visualization.DataTable();
+        var map_type = data.map_type
+        var is_heatmap = map_type == 'heat_map';
+        var is_markerclusterer = map_type == 'markerclusterer';
+        var is_circles = map_type == 'circles';
+        var is_addresses = data.granularity == "Address";
+        if(data.show_details || is_addresses){
+          table_data.addColumn('date', 'Date');
+          table_data.addColumn('string', 'Census '+data.granularity+' ID');
+          table_data.addColumn('string', 'Subject');
+          table_data.addColumn('string', 'Type');
+        }
+        else{
+          table_data.addColumn('string', data.granularity+' ID');
+          table_data.addColumn('string', 'Neighborhood');
+          table_data.addColumn('number', 'Physical Disorder Count');
+        }
+        var clusterStyles = [
+            {
+              url: null,
+              height: 5,
+              width: 5
+            }
+          ];
+        var mapOptions = {
+          center: new google.maps.LatLng(42.328, -71.060),
+          zoom: 12,
+          mapTypeId: google.maps.MapTypeId.TERRAIN,
+          gridSize: 20,
+          minimumClusterSize:1
+        };
+        if(is_heatmap){
+          mapOptions.styles = clusterStyles
+        }
+        map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+        infowindow = new google.maps.InfoWindow();
+        markersArray = new Array();
+        var table_rows = new Array();
+        var heatmapData = new Array();
+        if(is_markerclusterer || data.show_details || is_heatmap || is_addresses){
+          for (var i=0;i<data.locations.length;i++){
+            info =  data.locations[i];
+            if(info.latitude && info.longitude){
+              ll = new google.maps.LatLng(info.latitude, info.longitude, true);
+              //For Marker Clusterer
+              if(is_markerclusterer || is_heatmap){
+                addMarker(ll, info.date+": "+info.areaid+", "+info.type);
+                if(is_addresses){
+                  heatmapData.push({location: ll, weight: 1});
+                }
+              }
+
+              if(is_circles && is_addresses){
+                addCircle(ll, info);
+              }
+
+              //For table full of each incident 
+              if(data.show_details || is_addresses){
+                table_rows.push([new Date(info.date), info.areaid, info.subject, info.type]);
+              }
+            }
+          }
+        }
+        var area_identifier = data.area_identifier
+        for(var i=0;i<data.area_info.length;i++){
+          info = data.area_info[i]
+          if(info.coordinates){
+            ll = new google.maps.LatLng(info.coordinates.latitude, info.coordinates.longitude);
+            if(is_heatmap){
+              heatmapData.push({location: ll, weight: Math.log(info.count)});
+            }
+            if(is_circles){
+              addCircle(ll, info);
+            }
+          }
+          
+          area_url = '<a href="?show_details=True&f_'+area_identifier+'='+info.areaid+'">'+info.areaid+'</a>'
+          neighborhood_url = '<a href="?show_details=True&f_nsa_name='+info.nsa_name+'">'+info.nsa_name+'</a>'
+          if(data.show_details == false){
+            table_rows.push([area_url, neighborhood_url, info.count]);
+          }
+        
+        }
+        table_data.addRows(table_rows);
+        if(is_markerclusterer || is_heatmap){
+          var mc = new MarkerClusterer(map, markersArray, mapOptions);
+        }
+        var table = new google.visualization.Table(document.getElementById('table_div'));
+        table.draw(table_data, {allowHtml: true, showRowNumber: true, page:true, pageSize:1000});
+
+        if(is_heatmap){
+          console.log(heatmapData);
+          var heatmap = new google.maps.visualization.HeatmapLayer({
+            data: heatmapData,
+            dissipating: true,
+            radius: getNewRadius(),
+            map: map
+          });
+
+          google.maps.event.addListener(map, 'zoom_changed', function () {
+              heatmap.setOptions({radius:getNewRadius()});
+          });
+        }
+
+      }
+
+      var desiredRadiusPerPointInMeters = null;
+      var circleRadius = null;
+      if(data.granularity == "Block"){
+        desiredRadiusPerPointInMeters = 200;
+        circleRadius = 5
+      }else if(data.granularity == "Block Group"){
+        desiredRadiusPerPointInMeters = 500;
+        circleRadius = 8
+      }else if(data.granularity == "Census Tract"){
+        desiredRadiusPerPointInMeters = 1000;
+        circleRadius = 12
+      }else{
+        desiredRadiusPerPointInMeters = 100;
+        circleRadius = 1
+      }
+
+      function addCircle(location, info) {
+        desc = info.areaid +" , "+info.nsa_name+" : "+info.count
+        marker = new google.maps.Marker({
+          position: location,
+          icon: getCircle(info.count),
+          map: map,
+          title:desc
+        });
+        var fn = markerClickFunction(location,desc);
+        google.maps.event.addListener(marker, 'click', fn);
+        //markersArray.push(marker);
+      }
+
+      function addMarker(location, desc, count) {
+        marker = new google.maps.Marker({
+          position: location,
+          //icon: getCircle(count)
+          //map: map
+          //title:desc
+        });
+        //var fn = markerClickFunction(location,desc);
+        //google.maps.event.addListener(marker, 'click', fn);
+        markersArray.push(marker);
+      }
+
+      function getCircle(area_count) {
+        var color = "";
+        /**if(area_count < data.mean - data.std_dev){
+          color = "green"
+        }else if(area_count < data.mean){
+          color = "yellow"
+        }else if(area_count < data.mean + data.std_dev){
+          color = "orange"
+        }else{
+          color = "red"
+        }**/
+        if(area_count < data.lower_interquartile_range){
+          color = "green"
+        }else if(area_count < data.median){
+          color = "yellow"
+        }else if(area_count < data.upper_interquartile_range){
+          color = "orange"
+        }else{
+          color = "red"
+        }
+        var circle = {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: circleRadius,//Math.sqrt(area_count),//2 * Math.log(area_count),
+          fillColor:color,
+          fillOpacity:0.5,
+          strokeWeight:0
+        };
+        return circle;
+      }
+
+      function markerClickFunction(location, desc){
+        return function(e){
+          var infoHtml = '<div>'+desc+'</div>';
+          infowindow.setContent(infoHtml);
+          infowindow.setPosition(location);
+          infowindow.open(map);
+        }
+      }
+
+      function getNewRadius() {
+        var numTiles = 1 << map.getZoom();
+        var center = map.getCenter();
+        var moved = google.maps.geometry.spherical.computeOffset(center, 10000, 90); /*1000 meters to the right*/
+        var projection = new MercatorProjection();
+        var initCoord = projection.fromLatLngToPoint(center);
+        var endCoord = projection.fromLatLngToPoint(moved);
+        var initPoint = new google.maps.Point(
+          initCoord.x * numTiles,
+          initCoord.y * numTiles);
+        var endPoint = new google.maps.Point(
+          endCoord.x * numTiles,
+          endCoord.y * numTiles);
+        var pixelsPerMeter = (Math.abs(initPoint.x-endPoint.x))/10000.0;
+        var totalPixelSize = Math.floor(desiredRadiusPerPointInMeters*pixelsPerMeter);
+        console.log(totalPixelSize);
+        return totalPixelSize;
+         
+      }
+    </script>
+  </head>
+  <body onload="initialize()">
+    <div id="navigation">
+    <ul class="drop">
+      <li><a href="/boston/crm/">Home</a></li>
+      <li><a id="physical_disorder" href="#">Physical Disorder</a>
+        <ul>
+          <li><a id="private" href="#">Private</a>
+            <ul>
+                <li><a id="housing" href="#">Housing</a></li>
+                <li><a id="uncivil_use" href="#">Uncivil Use</a></li>
+                <li><a id="big_buildings" href="#">Big Buildings</a></li>
+            </ul>
+          </li>
+          <li><a id="public" href="#">Public</a>
+            <ul>
+                <li><a id="graffiti" href="#">Graffiti</a></li>
+                <li><a id="trash" href="#">Trash</a></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+       <li><a href="/boston/crm/social_disorder/">Social Disorder</a></li>
+    </ul>
+    <ul id="nav" class="drop">
+      <li>Granularity</a>
+        <ul>
+          <li><a id="census_tract" href="#">Census Tract</a></li>
+          <li><a id="block_group" href="#">Block Group</a></li>
+          <li><a id="block" href="#">Block</a></li>
+          <li><a id="address" href="#">Address</a></li>
+        </ul>
+      </li>
+    </ul>
+
+    <ul id="nav" class="drop">
+      <li>Map Type</a>
+        <ul>
+          <li><a id="heat_map" href="#">Heat Map</a></li>
+          <li><a id="markerclusterer" href="#">Marker Cluster</a></li>
+          <li><a id="circles" href="#">Circles</a></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+    <div id="map_canvas"></div>
+    <div id='table_div'></div>
+  </body>
+</html>
