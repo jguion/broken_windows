@@ -18,22 +18,33 @@ insertParam = (key, value) ->
 
     document.location.search = kvp.join('&')
 
-changeType = (new_type) ->
+changeType = (new_type, base) ->
+    console.log(new_type + " " + base)
     new_type = escape(new_type);
+    if base == "physical"
+        other_base = "social"
+    else
+        other_base = "physical"
 
     url = document.location.pathname.split('/');
-
     console.log(url)
 
     i=0
     while i < url.length
-        if (url[i]=="crm")
-
+        if url[i]==base
             if i + 1 == url.length
                 url.push new_type
             else
                 url[i+1] = new_type
             break
+        else if url[i]==other_base
+            url[i] = base
+            if i + 1 == url.length
+                url.push new_type
+            else
+                url[i+1] = new_type
+            break
+
         i++
     console.log(url)
     document.location.pathname = url.join('/')
@@ -79,35 +90,64 @@ $ ->
 
 $ ->
     $("#physical_disorder").click ->
-        changeType("physical_disorder")
+        changeType("physical_disorder", "physical")
 
 $ ->
     $("#private").click ->
-        changeType("private")
+        changeType("private", "physical")
 
 $ ->
     $("#housing").click ->
-        changeType("housing")
+        changeType("housing", "physical")
 
 $ ->
     $("#uncivil_use").click ->
-        changeType("uncivil_use")
+        changeType("uncivil_use", "physical")
 
 $ ->
     $("#big_buildings").click ->
-        changeType("big_buildings")
+        changeType("big_buildings", "physical")
 
 $ ->
     $("#public").click ->
-        changeType("public")
+        changeType("public", "physical")
 
 $ ->
     $("#graffiti").click ->
-        changeType("graffiti")
+        changeType("graffiti", "physical")
 
 $ ->
     $("#trash").click ->
-        changeType("trash")
+        changeType("trash", "physical")
+
+$ ->
+    $("#medical_emergency").click ->
+        changeType("medical_emergency", "social")
+
+$ ->
+    $("#social_disorder").click ->
+        changeType("social_disorder", "social")
+
+$ ->
+    $("#socstrife").click ->
+        changeType("socstrife", "social")
+
+$ ->
+    $("#alcohol").click ->
+        changeType("alcohol", "social")
+
+$ ->
+    $("#violence").click ->
+        changeType("violence", "social")
+
+$ ->
+    $("#guns").click ->
+        changeType("guns", "social")
+
+$ ->
+    $("#home_invasion").click ->
+        changeType("home_invasion", "social")
+
 
 save_filter: (text) ->
 	$.ajaxQueue

@@ -94,7 +94,8 @@
         else{
           table_data.addColumn('string', data.granularity+' ID');
           table_data.addColumn('string', 'Neighborhood');
-          table_data.addColumn('number', 'Physical Disorder Count');
+          table_data.addColumn('number', 'Disorder Count');
+          table_data.addColumn('number', 'Block Group population');
         }
         var clusterStyles = [
             {
@@ -107,7 +108,7 @@
           center: new google.maps.LatLng(42.328, -71.060),
           zoom: 12,
           mapTypeId: google.maps.MapTypeId.TERRAIN,
-          gridSize: 20,
+          gridSize: 15,
           minimumClusterSize:1
         };
         if(is_heatmap){
@@ -148,7 +149,8 @@
           if(info.coordinates){
             ll = new google.maps.LatLng(info.coordinates.latitude, info.coordinates.longitude);
             if(is_heatmap){
-              heatmapData.push({location: ll, weight: Math.log(info.count)});
+              w = (info.count / Math.log(info.popden));
+              heatmapData.push({location: ll, weight: w});
             }
             if(is_circles){
               addCircle(ll, info);
@@ -158,19 +160,40 @@
           area_url = '<a href="?show_details=True&f_'+area_identifier+'='+info.areaid+'">'+info.areaid+'</a>'
           neighborhood_url = '<a href="?show_details=True&f_nsa_name='+info.nsa_name+'">'+info.nsa_name+'</a>'
           if(data.show_details == false){
-            table_rows.push([area_url, neighborhood_url, info.count]);
+            table_rows.push([area_url, neighborhood_url, info.count, info.pop]);
           }
         
         }
         table_data.addRows(table_rows);
         if(is_markerclusterer || is_heatmap){
           var mc = new MarkerClusterer(map, markersArray, mapOptions);
+
+          google.maps.event.addListener(mc, 'clusterclick', function(cluster) {
+            var content = '';
+            // Convert lat/long from cluster object to a usable MVCObject
+            var info = new google.maps.MVCObject;
+            info.set('position', cluster.center_);
+            //----
+            //Get markers
+            var markers = cluster.getMarkers();
+            var titles = "<p>";
+            //Get all the titles
+            for(var i = 0; i < markers.length; i++) {
+                titles += markers[i].getTitle() + "<br />";
+            }
+            titles += "</p>"
+            //----
+            var infowindow = new google.maps.InfoWindow();
+            infowindow.close();
+            infowindow.setContent(titles); //set infowindow content to titles
+            infowindow.open(map, info);
+
+          });
         }
         var table = new google.visualization.Table(document.getElementById('table_div'));
         table.draw(table_data, {allowHtml: true, showRowNumber: true, page:true, pageSize:1000});
 
         if(is_heatmap){
-          console.log(heatmapData);
           var heatmap = new google.maps.visualization.HeatmapLayer({
             data: heatmapData,
             dissipating: true,
@@ -182,6 +205,11 @@
               heatmap.setOptions({radius:getNewRadius()});
           });
         }
+
+        var block_groups = new google.maps.KmlLayer({
+            url:"https://sites.google.com/site/cityofbostondisorder/kml-files/bostonblockgroup.kml?attredirects=0&d=1",
+            preserveViewport:true,
+            map: map});
 
       }
 
@@ -219,7 +247,7 @@
           position: location,
           //icon: getCircle(count)
           //map: map
-          //title:desc
+          title:desc
         });
         //var fn = markerClickFunction(location,desc);
         //google.maps.event.addListener(marker, 'click', fn);
@@ -282,7 +310,7 @@
         var totalPixelSize = Math.floor(desiredRadiusPerPointInMeters*pixelsPerMeter);
         console.log(totalPixelSize);
         return totalPixelSize;
-         
+  
       }
     </script>
   </head>
@@ -307,7 +335,17 @@
           </li>
         </ul>
       </li>
-       <li><a href="/boston/crm/social_disorder/">Social Disorder</a></li>
+       <li><a href="/boston/crm/social_disorder/">Social Disorder</a>
+          <ul>
+            <li><a id="medical_emergency" href="#">Medical Emergency</a></li>
+            <li><a id="social_disorder" href="#">Social Disorder</a></li>
+            <li><a id="socstrife" href="#">Social Strife</a></li>
+            <li><a id="alcohol" href="#">Alcohol</a></li>
+            <li><a id="violence" href="#">Violence</a></li>
+            <li><a id="guns" href="#">Guns</a></li>
+            <li><a id="home_invasion" href="#">Home Invasion</a></li>
+          </ul>
+       </li>
     </ul>
     <ul id="nav" class="drop">
       <li>Granularity</a>
