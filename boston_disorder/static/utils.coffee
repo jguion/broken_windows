@@ -148,6 +148,14 @@ $ ->
     $("#home_invasion").click ->
         changeType("home_invasion", "social")
 
+$ ->
+    $("#help").click ->
+        old_display = $("#help_modal")[0].style.display
+        if old_display == 'none'
+            $("#help_modal")[0].style.display = "block"
+        else
+            $("#help_modal")[0].style.display = "none"
+
 
 save_filter: (text) ->
 	$.ajaxQueue

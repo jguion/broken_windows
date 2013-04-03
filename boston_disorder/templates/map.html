@@ -96,6 +96,7 @@
           table_data.addColumn('string', 'Neighborhood');
           table_data.addColumn('number', 'Disorder Count');
           table_data.addColumn('number', 'Block Group population');
+          table_data.addColumn('number', 'Block Group Area');
         }
         var clusterStyles = [
             {
@@ -149,7 +150,10 @@
           if(info.coordinates){
             ll = new google.maps.LatLng(info.coordinates.latitude, info.coordinates.longitude);
             if(is_heatmap){
-              w = (info.count / Math.log(info.popden));
+              w = info.count
+              if(data.granularity == "Block Group"){
+                w = (w / Math.log(info.popden));
+              }
               heatmapData.push({location: ll, weight: w});
             }
             if(is_circles){
@@ -160,7 +164,7 @@
           area_url = '<a href="?show_details=True&f_'+area_identifier+'='+info.areaid+'">'+info.areaid+'</a>'
           neighborhood_url = '<a href="?show_details=True&f_nsa_name='+info.nsa_name+'">'+info.nsa_name+'</a>'
           if(data.show_details == false){
-            table_rows.push([area_url, neighborhood_url, info.count, info.pop]);
+            table_rows.push([area_url, neighborhood_url, info.count, info.pop, info.area]);
           }
         
         }
@@ -216,7 +220,7 @@
       var desiredRadiusPerPointInMeters = null;
       var circleRadius = null;
       if(data.granularity == "Block"){
-        desiredRadiusPerPointInMeters = 200;
+        desiredRadiusPerPointInMeters = 300;
         circleRadius = 5
       }else if(data.granularity == "Block Group"){
         desiredRadiusPerPointInMeters = 500;
@@ -225,7 +229,7 @@
         desiredRadiusPerPointInMeters = 1000;
         circleRadius = 12
       }else{
-        desiredRadiusPerPointInMeters = 100;
+        desiredRadiusPerPointInMeters = 200;
         circleRadius = 1
       }
 
@@ -308,7 +312,6 @@
           endCoord.y * numTiles);
         var pixelsPerMeter = (Math.abs(initPoint.x-endPoint.x))/10000.0;
         var totalPixelSize = Math.floor(desiredRadiusPerPointInMeters*pixelsPerMeter);
-        console.log(totalPixelSize);
         return totalPixelSize;
   
       }
@@ -367,7 +370,15 @@
         </ul>
       </li>
     </ul>
+    <a href="#" id="help">Help</a>
   </div>
+    <div id="help_modal" class="no_show" style="display: none">
+      What am I looking at?
+      The map is currently displaying {{type}} disorder grouped on the map by {{granularity}}.
+      You can view the count of instances of this type of incident at each location. Clicking on one of the numbers will give you a list of the aggregated disorders at that location. For more information, look at the table below the map.
+      Red areas indicate a high concentration of disorder counts in a specific area. The outlines on the map represent the Census Block Groups for each location. 
+      You can change the disorder type or group granularity by hovering over the nav item.
+    </div>
     <div id="map_canvas"></div>
     <div id='table_div'></div>
   </body>

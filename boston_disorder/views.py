@@ -175,7 +175,7 @@ def crm(request, l1=None):
 					   "coordinates":get_coordinates(info), "pop":bg_population.get(info['bg_id'])[0], 
 					   	"popden":bg_population.get(info['bg_id'])[1], "area":bg_population.get(info['bg_id'])[2]} for info in 
 								crm.values(area_identifier).distinct().annotate(Count('pk'))
-									.values("nsa_name","pk__count",area_identifier, 'bg_id').order_by('pk__count')
+									.values("nsa_name","pk__count",area_identifier, 'bg_id').order_by('-pk__count')
 									 if info[area_identifier] is not None]
 					if area_identifier else [])
 
@@ -247,7 +247,7 @@ def crm(request, l1=None):
 						   	'upper_interquartile_range':upper_interquartile_range, 'median':median},
 						    default=dthandler)
 
-		return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
+		return render_to_response('map.html',{'data':data, 'type':l1, 'granularity':granularity}, context_instance=RequestContext(request))
 	return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
 
 def calls(request, l1=None):
@@ -311,7 +311,7 @@ def calls(request, l1=None):
 					   "coordinates":get_coordinates(info), "pop":bg_population.get(info['bg_id'])[0], 
 					   	"popden":bg_population.get(info['bg_id'])[1], "area":bg_population.get(info['bg_id'])[2]} for info in 
 								calls.values(area_identifier).distinct().annotate(Count('pk'))
-									.values("nsa_name","pk__count",area_identifier, 'bg_id').order_by('pk__count')
+									.values("nsa_name","pk__count",area_identifier, 'bg_id').order_by('-pk__count')
 									 if info[area_identifier] is not None]
 					if area_identifier else [])
 
@@ -380,7 +380,7 @@ def calls(request, l1=None):
 						   	'upper_interquartile_range':upper_interquartile_range, 'median':median},
 						    default=dthandler)
 
-		return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
+		return render_to_response('map.html',{'data':data,'type':l1, 'granularity':granularity}, context_instance=RequestContext(request))
 	return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
 
 

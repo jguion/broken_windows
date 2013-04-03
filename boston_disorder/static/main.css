@@ -22,6 +22,22 @@ html { height: 100%;}
 	height: 20%;
 }
 
+#help{
+	float: right;
+	margin-top: 10px;
+	margin-right: 10px;
+}
+
+#help_modal{
+	height:50px;
+	margin-top:80px;
+
+
+}
+
+div {
+	display:block; font-family: Verdana; font-size: 14px; text-decoration: none;
+}
 
 ul.drop a { display:block; color: #fff; font-family: Verdana; font-size: 14px; text-decoration: none;}
 ul.drop, ul.drop li, ul.drop ul { list-style: none; margin: 0; padding: 0; border: 1px solid #fff; background: #555; color: #fff;}
