@@ -1,6 +1,5 @@
-from boston_disorder.models import Crime, ServiceRequest
 from geopy import geocoders
-
+"""
 def save_crime_from_json(data):
     for crime_list in data:
         c = Crime(compnos = crime_list[8],
@@ -81,7 +80,7 @@ def save_service_request_from_json(data):
                 geocoded_loc = service_request_list[34])
         c.save()
         print "Save Successful %s"%i
-
+"""
 def parse_lat_lng(l):
     l = l.split(',')
     lat = None
