@@ -10,6 +10,9 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
+SITE_URL='http://ec2-50-112-62-38.us-west-2.compute.amazonaws.com/'
+SITE_NAME='Broken Windows'
+
 MANAGERS = ADMINS
 
 DATABASES = {
@@ -59,7 +62,7 @@ MEDIA_URL = ''
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = '/Users/jeffreyguion/Code/broken_windows/boston_disorder/static/'
+STATIC_ROOT = '/home/jguion/broken_windows/boston_disorder/static/'
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
