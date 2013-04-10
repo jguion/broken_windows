@@ -18,8 +18,34 @@ insertParam = (key, value) ->
 
     document.location.search = kvp.join('&')
 
+insertParams = (keys, values) ->
+    kvp = document.location.search.substr(1).split('&');
+    j = 0
+    while j < keys.length
+        key = escape(keys[j])
+        value = escape(values[j]);
+
+        if value == ""
+            j++
+            continue
+
+        i=kvp.length
+        x
+        while i--
+            x = kvp[i].split('=')
+            if (x[0]==key)
+                x[1] = value
+                kvp[i] = x.join('=')
+                break
+
+        if i<0 
+            kvp[kvp.length] = [key,value].join('=')
+        j++
+
+    document.location.search = kvp.join('&')
+
+
 changeType = (new_type, base) ->
-    console.log(new_type + " " + base)
     new_type = escape(new_type);
     if base == "physical"
         other_base = "social"
@@ -27,7 +53,6 @@ changeType = (new_type, base) ->
         other_base = "physical"
 
     url = document.location.pathname.split('/');
-    console.log(url)
 
     i=0
     while i < url.length
@@ -46,7 +71,6 @@ changeType = (new_type, base) ->
             break
 
         i++
-    console.log(url)
     document.location.pathname = url.join('/')
 
 $ ->
@@ -155,6 +179,29 @@ $ ->
             $("#help_modal")[0].style.display = "block"
         else
             $("#help_modal")[0].style.display = "none"
+
+$ ->
+    $("#apply").click ->
+        sd = $("#start_date").datepicker("getDate");
+        s_date = ""
+        if sd
+            s_year = sd.getFullYear()
+            s_month = sd.getMonth()+1
+            s_day = sd.getDate()
+            s_date = s_year+"-"+s_month+"-"+s_day
+
+        ed = $("#end_date").datepicker("getDate");
+        e_date = ""
+        if ed
+            e_year = ed.getFullYear()
+            e_month = ed.getMonth()+1
+            e_day = ed.getDate()
+            e_date = e_year+"-"+e_month+"-"+e_day
+        
+        if document.location.pathname.indexOf('physical') != -1
+            insertParams(['f_close_dt__gte', 'f_close_dt__lte'], [s_date, e_date])
+        else
+            insertParams(['f_open_dt__gte', 'f_open_dt__lte'], [s_date, e_date])
 
 
 save_filter: (text) ->

@@ -151,8 +151,8 @@ def crm(request, l1=None):
 		return blocks_to_coordinates.get(areaid) if areaid else None
 
 	
-	bg_population = (dict((x['bg_id'], (x['totalpop'], x['popden'], x['dry_sqmi'])) for x in (BostonBlockGroup.objects
-													.values("totalpop", "bg_id", "popden", "dry_sqmi"))))
+	bg_population = (dict((x['bg_id'], (x['totalpop'], x['popden'], x['area'])) for x in (BostonBlockGroup.objects
+													.values("totalpop", "bg_id", "popden", "area"))))
 	crm = (BostonCRM.objects.filter(**filter_args) if filter_args else BostonCRM.objects)
 	data = {}
 	if l1:
@@ -236,9 +236,11 @@ def crm(request, l1=None):
 			res['date'] = entry['open_dt']
 			res['bg_id'] = str(entry['bg_id'])
 			res['areaid'] = str(areaid)
+			res['address'] = address
 			res['subject'] = "%s, %s"%(entry['subject'],entry['reason'])
 			res['type'] = "%s"%entry['type']
 			locations.append(res)
+		locations = sorted(locations, key=lambda x: x['address'])
 
 		data = json.dumps({'locations':locations,'area_info':areas, #'areas':neighborhoods,
 						   'show_details':show_details, 'granularity':granularity, 
@@ -247,7 +249,9 @@ def crm(request, l1=None):
 						   	'upper_interquartile_range':upper_interquartile_range, 'median':median},
 						    default=dthandler)
 
-		return render_to_response('map.html',{'data':data, 'type':l1, 'granularity':granularity}, context_instance=RequestContext(request))
+		return render_to_response('map.html',
+								 {'data':data, 'type':l1, 'granularity':granularity, 'map_type':map_type},
+								  context_instance=RequestContext(request))
 	return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
 
 def calls(request, l1=None):
@@ -290,8 +294,8 @@ def calls(request, l1=None):
 		return blocks_to_coordinates.get(areaid) if areaid else None
 
 	
-	bg_population = (dict((x['bg_id'], (x['totalpop'], x['popden'], x['dry_sqmi'])) for x in (BostonBlockGroup.objects
-													.values("totalpop", "bg_id", "popden", "dry_sqmi"))))
+	bg_population = (dict((x['bg_id'], (x['totalpop'], x['popden'], x['area'])) for x in (BostonBlockGroup.objects
+													.values("totalpop", "bg_id", "popden", "area"))))
 	calls = []
 	data = {}
 	if l1:
@@ -322,14 +326,15 @@ def calls(request, l1=None):
 					print "**%s, %s, %s"%(i,area['nsa_name'], area['areaid'])
 
 			counts = [x['count'] for x in areas]
-			mean = sum(counts, 0.0) / len(counts)
-			d = [ (i - mean) ** 2 for i in counts]
-			std_dev = math.sqrt(sum(d) / len(d))
+			if counts:
+				mean = sum(counts, 0.0) / len(counts)
+				d = [ (i - mean) ** 2 for i in counts]
+				std_dev = math.sqrt(sum(d) / len(d))
 
-			z = len(counts)
-			lower_interquartile_range = counts[z/4]
-			median = counts[z/2]
-			v = counts[(z * 3)/4]
+				z = len(counts)
+				lower_interquartile_range = counts[z/4]
+				median = counts[z/2]
+				v = counts[(z * 3)/4]
 
 		# min_area = None
 		# max_area = None
@@ -369,6 +374,7 @@ def calls(request, l1=None):
 			res['date'] = entry['close_dt']
 			res['bg_id'] = str(entry['bg_id'])
 			res['areaid'] = str(areaid)
+			res['address'] = address
 			res['subject'] = "Subject"
 			res['type'] = "%s"%entry['type_desc']
 			locations.append(res)
@@ -380,7 +386,9 @@ def calls(request, l1=None):
 						   	'upper_interquartile_range':upper_interquartile_range, 'median':median},
 						    default=dthandler)
 
-		return render_to_response('map.html',{'data':data,'type':l1, 'granularity':granularity}, context_instance=RequestContext(request))
+		return render_to_response('map.html',
+						{'data':data,'type':l1, 'granularity':granularity, 'map_type':map_type},
+						 context_instance=RequestContext(request))
 	return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
 
 

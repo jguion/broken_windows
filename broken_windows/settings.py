@@ -82,7 +82,7 @@ STATICFILES_FINDERS = (
 )
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'h^3w!ab+hg@h5sr(%n$)faw3k@j!twa1b3qw#q#!&amp;-b(r-kr0h'
+SECRET_KEY = 'w2z(8z13i2f*yd=y$((zyk#tb75t&amp;p1mc1a%opu&amp;-gkf%fbjkc'#'h^3w!ab+hg@h5sr(%n$)faw3k@j!twa1b3qw#q#!&amp;-b(r-kr0h'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -131,6 +131,8 @@ COMPRESS_PRECOMPILERS = (
     ('text/coffeescript', 'coffee --compile --stdio'),
 )
 
+GOOGLE_MAPS_API_KEY = 'AIzaSyDqubrU5ZLOeVplgi--fxTMCs0zNvNjlEI'
+#GOOGLE_MAPS_API_KEY = 'AIzaSyAAv-yAZxAdC8zHfbl513pPVPF88l94ya4'
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.

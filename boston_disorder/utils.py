@@ -1,4 +1,5 @@
 from geopy import geocoders
+from broken_windows.settings import GOOGLE_MAPS_API_KEY
 """
 def save_crime_from_json(data):
     for crime_list in data:
@@ -117,7 +118,7 @@ def parse_lat_lng(l):
 def get_lat_long(address):
     res = {}
     try:
-      g = geocoders.Google()
+      g = geocoders.Google(api_key=GOOGLE_MAPS_API_KEY)
       place, (lat, lng) = g.geocode(address)
       res['latitude'] = lat
       res['longitude'] = lng
