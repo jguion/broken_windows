@@ -396,32 +396,32 @@
     <div id="navigation">
     <ul class="drop">
       <li>Disorder type: {{type}}</li>
-      <li><a id="physical_disorder" href="#">Physical Disorder</a><a class="info_link"></a>
+      <li><a id="physical_disorder" href="#">Physical Disorder</a><a id="i_physical_disorder" class="info_link" href="#"></a>
         <ul>
-          <li><a id="private" href="#">Private</a><a class="info_link"></a>
+          <li><a id="private" href="#">Private</a><a id="i_private" class="info_link" href="#"></a>
             <ul>
-                <li><a id="housing" href="#">Housing</a><a class="info_link"></a></li>
-                <li><a id="uncivil_use" href="#">Uncivil Use</a><a class="info_link"></a></li>
-                <li><a id="big_buildings" href="#">Big Buildings</a><a class="info_link"></a></li>
+                <li><a id="housing" href="#">Housing</a><a id="i_housing" class="info_link" href="#"></a></li>
+                <li><a id="uncivil_use" href="#">Uncivil Use</a><a id="i_uncivil_use" class="info_link" href="#"></a></li>
+                <li><a id="big_buildings" href="#">Big Buildings</a><a id="i_big_buildings" class="info_link" href="#"></a></li>
             </ul>
           </li>
-          <li><a id="public" href="#">Public</a><a class="info_link"></a>
+          <li><a id="public" href="#">Public</a><a id="i_public" class="info_link" href="#"></a>
             <ul>
-                <li><a id="graffiti" href="#">Graffiti</a><a class="info_link"></a></li>
-                <li><a id="trash" href="#">Trash</a><a class="info_link"></a></li>
+                <li><a id="graffiti" href="#">Graffiti</a><a id="i_graffiti" class="info_link" href="#"></a></li>
+                <li><a id="trash" href="#">Trash</a><a id="i_trash" class="info_link" href="#"></a></li>
             </ul>
           </li>
         </ul>
       </li>
-       <li><a href="/boston/crm/social_disorder/">Social Disorder</a><a class="info_link"></a>
+       <li><a id="social_disorder" href="#">Social Disorder</a><a id="i_social_disorder" class="info_link" href="#"></a>
           <ul>
-            <li><a id="medical_emergency" href="#">Medical Emergency</a><a class="info_link"></a></li>
-            <li><a id="social_disorder" href="#">Social Disorder</a><a class="info_link"></a></li>
-            <li><a id="socstrife" href="#">Social Strife</a><a class="info_link"></a></li>
-            <li><a id="alcohol" href="#">Alcohol</a><a class="info_link"></a></li>
-            <li><a id="violence" href="#">Violence</a><a class="info_link"></a></li>
-            <li><a id="guns" href="#">Guns</a><a class="info_link"></a></li>
-            <li><a id="home_invasion" href="#">Home Invasion</a><a class="info_link"></a></li>
+            <li><a id="medical_emergency" href="#">Medical Emergency</a><a id="i_medical_emergency" class="info_link" href="#"></a></li>
+            <li><a id="social_disorder" href="#">Social Disorder</a><a id="i_social_disorder" class="info_link" href="#"></a></li>
+            <li><a id="socstrife" href="#">Social Strife</a><a id="i_socstrife" class="info_link" href="#"></a></li>
+            <li><a id="alcohol" href="#">Alcohol</a><a id="i_alcohol" class="info_link" href="#"></a></li>
+            <li><a id="violence" href="#">Violence</a><a id="i_violence" class="info_link" href="#"></a></li>
+            <li><a id="guns" href="#">Guns</a><a id="i_guns" class="info_link" href="#"></a></li>
+            <li><a id="home_invasion" href="#">Home Invasion</a><a id="i_home_invasion" class="info_link" href="#"></a></li>
           </ul>
        </li>
     </ul>
@@ -441,21 +441,28 @@
         <ul>
           <li><a id="heat_map" href="#">Heat Map</a></li>
           <li><a id="markerclusterer" href="#">Marker Cluster</a></li>
-          <li><a id="circles" href="#">Circles</a></li>
+          <!--<li><a id="circles" href="#">Circles</a></li>-->
         </ul>
       </li>
     </ul>
     <a href="#" class="help" id="help">Advanced Options</a>
   </div>
     <div id="help_modal" class="no_show" style="display: none">
-      <p>Start Date: <input type="text" id="start_date" /></p>
-      <p>End Date: <input type="text" id="end_date" /></p>
+      <div id="datepicker">
+        <p>Start Date: <input type="text" id="start_date" /></p>
+        <p>End Date: <input type="text" id="end_date" /></p>
+      </div>
+      <form id="filter">Filter
+        <input value="" type="text" id="f_type" placeholder="Field"/>
+        <input value="" type="text" id="f_val" placeholder="Value"/>
+      </form>
       <!--What am I looking at?
       The map is currently displaying {{type}} disorder grouped on the map by {{granularity}}.
       You can view the count of instances of this type of incident at each location. Clicking on one of the numbers will give you a list of the aggregated disorders at that location. For more information, look at the table below the map.
       Red areas indicate a high concentration of disorder counts in a specific area. The outlines on the map represent the Census Block Groups for each location. 
       You can change the disorder type or group granularity by hovering over the nav item.-->
       <a href='#' class="button" id="apply">Apply</a>
+      <a href='#' class="button" id="toggle_numbers">Toggle Numbers</a>
     </div>
     <div id="map_canvas"></div>
     <div id='table_div'></div>
