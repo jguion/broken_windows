@@ -3,6 +3,7 @@
   <head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <link rel="stylesheet" href="/static/main.css" type="text/css" />
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
     <script type="text/javascript"
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDqubrU5ZLOeVplgi--fxTMCs0zNvNjlEI&sensor=true&libraries=visualization,geometry">
     </script>
@@ -11,7 +12,6 @@
     <script type='text/javascript' src='https://www.google.com/jsapi'></script>
     <script type='text/javascript' src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
     <script type='text/javascript' src="http://code.jquery.com/ui/1.10.0/jquery-ui.js"></script>
-    <script type='text/javascript' src='/static/knockout-2.2.1.js'></script>
     {% load compress %}
     {% compress js %}
     <script type="text/coffeescript" charset="utf-8" src="/static/utils.coffee" />
@@ -20,11 +20,15 @@
       google.load('visualization', '1', {packages:['table']});
       var map;
       var markersArray;
+      var addressArray;
       var geocoder;
       var infowindow;
       var data = {{data|safe}}
       var old_zoom_level;
       var heatmap;
+      var block_groups;
+      var neighborhoods;
+      var bowdoin_geneva;
       var mc;
       var mapOptions;
 
@@ -80,6 +84,31 @@
 
       //Mercator --END--
 
+      /**
+       *  The function for calculating the cluster icon image.
+       *
+       *  @param {Array.<google.maps.Marker>} markers The markers in the clusterer.
+       *  @param {number} numStyles The number of styles available.
+       *  @return {Object} A object properties: 'text' (string) and 'index' (number).
+       *  @private
+       */
+      MarkerClusterer.prototype.calculator_ = function(markers, numStyles) {
+          var index = 0;
+          var count = markers.length;
+          var dv = count;
+          while (dv !== 0) {
+              dv = parseInt(dv / 5, 10);
+              index++;
+          }
+
+          index = Math.min(index, numStyles);
+          return {
+              text: count,
+              index: index
+          };
+      };
+
+
 
       function initialize() {
         //var data = {{data|safe}}
@@ -104,7 +133,7 @@
         }
         var clusterStyles = [
             {
-              url: null,
+              url: "",
               height: 5,
               width: 5
             }
@@ -150,6 +179,7 @@
         map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
         infowindow = new google.maps.InfoWindow();
         markersArray = new Array();
+        addressArray = new Array();
         var table_rows = new Array();
         var heatmapData = new Array();
         if(is_markerclusterer || data.show_details || is_heatmap || is_addresses){
@@ -159,10 +189,15 @@
               ll = new google.maps.LatLng(info.latitude, info.longitude, true);
               //For Marker Clusterer
               if(is_markerclusterer || is_heatmap){
-                addMarker(ll, "<b>"+info.date+ "</b> "+info.type +":<br/>"+info.address+": ("+info.areaid+")");
+                addMarker(ll, ""+info.date+ "<b> "+info.type +"</b>:<br/>"+info.address+": ("+info.areaid+")");
                 if(is_addresses){
                   heatmapData.push({location: ll, weight: 1});
                 }
+              }
+
+              if(data.is_default && info.address_latitude != null){
+                ll2 = new google.maps.LatLng(info.address_latitude, info.address_longitude, true);
+                addAddressMarker(ll2, ""+info.date+ "<b> "+info.type +"</b>:<br/>"+info.address);
               }
 
               if(is_circles && is_addresses){
@@ -183,8 +218,11 @@
             ll = new google.maps.LatLng(info.coordinates.latitude, info.coordinates.longitude);
             if(is_heatmap || true){
               w = info.count
-              if(data.granularity == "Block Group"){
+              if(data.granularity == "Block Group" && data.data_type == "Physical"){
                 w = (w / Math.log(info.area));
+              }
+              if(data.granularity == "Block Group" && data.data_type == "Social"){
+                w = (w / Math.log(info.popden));
               }
               heatmapData.push({location: ll, weight: w});
             }
@@ -265,23 +303,42 @@
         old_zoom_level = map.zoom;
         google.maps.event.addListener(map, 'zoom_changed', function () {
               var z = map.zoom;
-              if(is_heatmap && old_zoom_level < 15 && z >= 15){
+              if(is_heatmap && old_zoom_level < 16 && z >= 16){
                 heatmap.setMap(null);
-                //mapOptions.styles = default_cluster_styles;
-                mc.setStyles(default_cluster_styles);
+                if(data.is_default){
+                  mc.clearMarkers();
+                  mc.setStyles(default_cluster_styles); 
+                  mc.addMarkers(addressArray);
+                }
+                mc.setStyles(default_cluster_styles); 
               }
-              else if(is_heatmap && old_zoom_level >= 15 && z < 15){
+              else if(is_heatmap && old_zoom_level >= 16 && z < 16){
                 heatmap.setMap(map);
+
+                if(data.is_default){
+                  mc.clearMarkers();
+                  mc.setStyles(clusterStyles);
+                  mc.addMarkers(markersArray);
+                }
                 mc.setStyles(clusterStyles);
               }
               old_zoom_level = z;
           });
 
-        var block_groups = new google.maps.KmlLayer({
+        block_groups = new google.maps.KmlLayer({
             url:"https://sites.google.com/site/cityofbostondisorder/kml-files/bostonblockgroup.kml?attredirects=0&d=1",
             preserveViewport:true,
-            map: map});
+            map: null});
 
+        bowdoin_geneva = new google.maps.KmlLayer({
+            url:"https://sites.google.com/site/cityofbostondisorder/kml-files/bg_outline_no_fill.shp.kml?attredirects=0&d=1",
+            preserveViewport:true,
+            map: null});
+
+        neighborhoods = new google.maps.KmlLayer({
+            url:"https://sites.google.com/site/cityofbostondisorder/kml-files/bra_planning_districts.shp.kml?attredirects=0&d=1",
+            preserveViewport:true,
+            map: null});
       }
 
       var desiredRadiusPerPointInMeters = null;
@@ -331,6 +388,16 @@
         //var fn = markerClickFunction(location,desc);
         //google.maps.event.addListener(marker, 'click', fn);
         markersArray.push(marker);
+      }
+
+      function addAddressMarker(location, desc, count) {
+        marker = new google.maps.Marker({
+          position: location,
+          title:desc
+        });
+        //var fn = markerClickFunction(location,desc);
+        //google.maps.event.addListener(marker, 'click', fn);
+        addressArray.push(marker);
       }
 
       function getCircle(area_count) {
@@ -395,17 +462,17 @@
   <body onload="initialize()">
     <div id="navigation">
     <ul class="drop">
-      <li>Disorder type: {{type}}</li>
+      <li style="background:red">Now Viewing: {{display_type}}</li>
       <li><a id="physical_disorder" href="#">Physical Disorder</a><a id="i_physical_disorder" class="info_link" href="#"></a>
         <ul>
-          <li><a id="private" href="#">Private</a><a id="i_private" class="info_link" href="#"></a>
+          <li><a id="private" href="#">Private Neglect</a><a id="i_private" class="info_link" href="#"></a>
             <ul>
                 <li><a id="housing" href="#">Housing</a><a id="i_housing" class="info_link" href="#"></a></li>
                 <li><a id="uncivil_use" href="#">Uncivil Use</a><a id="i_uncivil_use" class="info_link" href="#"></a></li>
                 <li><a id="big_buildings" href="#">Big Buildings</a><a id="i_big_buildings" class="info_link" href="#"></a></li>
             </ul>
           </li>
-          <li><a id="public" href="#">Public</a><a id="i_public" class="info_link" href="#"></a>
+          <li><a id="public" href="#">Public Denigration</a><a id="i_public" class="info_link" href="#"></a>
             <ul>
                 <li><a id="graffiti" href="#">Graffiti</a><a id="i_graffiti" class="info_link" href="#"></a></li>
                 <li><a id="trash" href="#">Trash</a><a id="i_trash" class="info_link" href="#"></a></li>
@@ -413,56 +480,69 @@
           </li>
         </ul>
       </li>
-       <li><a id="social_disorder" href="#">Social Disorder</a><a id="i_social_disorder" class="info_link" href="#"></a>
+        <li><a id="social_disorder" href="#">Social Disorder</a><a id="i_social_disorder" class="info_link" href="#"></a>
           <ul>
-            <li><a id="medical_emergency" href="#">Medical Emergency</a><a id="i_medical_emergency" class="info_link" href="#"></a></li>
-            <li><a id="social_disorder" href="#">Social Disorder</a><a id="i_social_disorder" class="info_link" href="#"></a></li>
+            <li><a id="public_social_disorder" href="#">Public Social Disorder</a><a id="i_public_social_disorder" class="info_link" href="#"></a></li>
             <li><a id="socstrife" href="#">Social Strife</a><a id="i_socstrife" class="info_link" href="#"></a></li>
             <li><a id="alcohol" href="#">Alcohol</a><a id="i_alcohol" class="info_link" href="#"></a></li>
-            <li><a id="violence" href="#">Violence</a><a id="i_violence" class="info_link" href="#"></a></li>
-            <li><a id="guns" href="#">Guns</a><a id="i_guns" class="info_link" href="#"></a></li>
-            <li><a id="home_invasion" href="#">Home Invasion</a><a id="i_home_invasion" class="info_link" href="#"></a></li>
+            <li><a id="interpersonal_violence" href="#">Interpersonal Violence</a><a id="i_interpersonal_violence" class="info_link" href="#"></a></li>
+            <li><a id="guns" href="#">Prevalence of Guns</a><a id="i_guns" class="info_link" href="#"></a></li>
+          </uL>
+        </li>
+        <li><a id="medical_emergency" href="#">Medical Emergencies</a><a id="i_medical_emergency" class="info_link" href="#"></a>
+          <ul>
+            <li><a id="major_medical_emergency" href="#">Major Medical</a><a id="i_major_medical_emergency" class="info_link" href="#"></a></li>
+            <li><a id="youth_health" href="#">Youth Health</a><a id="i_youth_health" class="info_link" href="#"></a></li>
+            <!--<li><a id="no_med" href="#">No Med</a><a id="i_no_med" class="info_link" href="#"></a></li>-->
           </ul>
-       </li>
-    </ul>
-    <ul id="nav" class="drop">
-      <li>Granularity: {{granularity}}</a>
-        <ul>
-          <li><a id="census_tract" href="#">Census Tract</a></li>
-          <li><a id="block_group" href="#">Block Group</a></li>
-          <li><a id="block" href="#">Block</a></li>
-          <li><a id="address" href="#">Address</a></li>
-        </ul>
-      </li>
+        </li>
     </ul>
 
-    <ul id="nav" class="drop">
-      <li>Map Type: {{map_type}}</a>
-        <ul>
-          <li><a id="heat_map" href="#">Heat Map</a></li>
-          <li><a id="markerclusterer" href="#">Marker Cluster</a></li>
-          <!--<li><a id="circles" href="#">Circles</a></li>-->
-        </ul>
-      </li>
-    </ul>
     <a href="#" class="help" id="help">Advanced Options</a>
   </div>
     <div id="help_modal" class="no_show" style="display: none">
       <div id="datepicker">
+        <b>Date picker</b>
         <p>Start Date: <input type="text" id="start_date" /></p>
         <p>End Date: <input type="text" id="end_date" /></p>
       </div>
-      <form id="filter">Filter
-        <input value="" type="text" id="f_type" placeholder="Field"/>
-        <input value="" type="text" id="f_val" placeholder="Value"/>
-      </form>
-      <!--What am I looking at?
-      The map is currently displaying {{type}} disorder grouped on the map by {{granularity}}.
-      You can view the count of instances of this type of incident at each location. Clicking on one of the numbers will give you a list of the aggregated disorders at that location. For more information, look at the table below the map.
-      Red areas indicate a high concentration of disorder counts in a specific area. The outlines on the map represent the Census Block Groups for each location. 
-      You can change the disorder type or group granularity by hovering over the nav item.-->
-      <a href='#' class="button" id="apply">Apply</a>
-      <a href='#' class="button" id="toggle_numbers">Toggle Numbers</a>
+
+            <a href='#' class="button" id="apply">Apply</a>
+
+      <div id="filter">
+        <form class="filter_form"><b>Filter</b>
+          <input value="" type="text" id="f_type" placeholder="Field"/>
+          <input value="" type="text" id="f_val" placeholder="Value"/>
+        </form>
+
+        <form class="filter_form"><b>Compare Neighborhoods</b>
+          <input value="" type="text" id="f_nsa_name__in" placeholder="Neighborhoods"/>
+          <br/>
+          Enter neighborhood names separated by a comma
+        </form>
+      </div>
+    
+
+      <ul id="granularity" class="drop">
+        <li>Granularity: {{granularity}}</a>
+          <ul>
+            <li><a id="census_tract" href="#">Census Tract</a></li>
+            <li><a id="block_group" href="#">Block Group</a></li>
+            <li><a id="block" href="#">Block</a></li>
+            <li><a id="address" href="#">Address</a></li>
+          </ul>
+        </li>
+      </ul>
+      
+      <div class="toggle">
+        <a href='#' class="button" id="toggle_numbers">Toggle Numbers</a>
+        <a href='#' class="button" id="toggle_cbgs">Toggle CBGs</a>
+        <a href='#' class="button" id="toggle_neighborhoods">Toggle Neighborhoods</a>
+        <a href='#' class="button" id="toggle_bowdoin_geneva">Toggle Bowdoin Geneva</a>
+      </div>
+    </div>
+
+    <div id="dialog-message" title=" ">
     </div>
     <div id="map_canvas"></div>
     <div id='table_div'></div>

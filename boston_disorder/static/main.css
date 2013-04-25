@@ -1,4 +1,5 @@
 body {
+	background: #eeeeee;
 	padding: 0;
 	margin: 0;
 	font-family: Lucida Grande, Helvetica, Arial, sans-serif;
@@ -25,8 +26,8 @@ html {
 }
 
 #help_modal{
-	height:50px;
-	margin-top:80px;
+	height:85px;
+	margin-top:65px;
 }
 
 #what_am_i {
@@ -43,8 +44,14 @@ html {
 	position: relative;
 }
 
-#toggle_numbers {
+.toggle {
 	float:right;
+	width:200px;
+}
+
+#apply{
+	margin-top: 100px;
+	margin-left:0px;
 }
 
 #datepicker{
@@ -53,7 +60,15 @@ html {
 
 #filter{
 	float: left;
-	padding: 25px;
+	padding: 15px;
+}
+
+#f_nsa_name__in{
+	width:240px;
+}
+
+.filter_form{
+	padding: 5px;
 }
 
 ul.drop a {
@@ -63,6 +78,7 @@ ul.drop a {
 	font-size: 14px; 
 	text-decoration: none;
 }
+
 ul.drop, ul.drop li, ul.drop ul { 
 	list-style: none; 
 	margin: 0; 
@@ -73,7 +89,7 @@ ul.drop, ul.drop li, ul.drop ul {
 }
 ul.drop { 
 	position: relative; 
-	z-index: 597; 
+	z-index: 97; 
 	float: left; }
 ul.drop li { 
 	float: left; 
@@ -85,7 +101,7 @@ ul.drop li {
 }
 ul.drop li.hover, ul.drop li:hover { 
 	position: relative; 
-	z-index: 599; 
+	z-index: 99; 
 	cursor: default; 
 	background: #1e7c9a; 
 }
@@ -94,8 +110,8 @@ ul.drop ul {
 	position: absolute; 
 	top: 100%; 
 	left: 0; 
-	z-index: 598; 
-	width: 215px; 
+	z-index: 98; 
+	width: 240px; 
 	background: #555; 
 	border: 1px solid #fff; 
 }
@@ -128,7 +144,7 @@ ul.drop li:hover > ul {
 	/* Adds the transparent background */
 	background-color: rgba(1, 1, 1, 0.8);
 	color: rgba(1, 1, 1, 0.8);
-	z-index: 599
+	z-index: 99
 }
 #navigation a {
 	font-size: 14px;
@@ -174,14 +190,13 @@ ul.drop li:hover > ul {
 	display:inline-block;
 	color:#306108;
 	font-family:arial;
-	font-size:15px;
-	font-weight:bold;
-	padding:6px 24px;
+	font-size:12px;
+	padding:6px 8px;
 	text-decoration:none;
 	text-shadow:1px 1px 0px #aade7c;
 	float: left;
 	margin-left: 10px;
-	margin-top: 70px;
+	margin-top: 5px;
 }.button:hover {
 	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #5cb811), color-stop(1, #77d42a) );
 	background:-moz-linear-gradient( center top, #5cb811 5%, #77d42a 100% );
