@@ -14,7 +14,9 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     # url(r'^admin/', include(admin.site.urls)),
-     url(r'boston/physical/(?P<l1>[a-zA-Z0-9: _]*)/?$', 'boston_disorder.views.crm'),
-     url(r'boston/social/(?P<l1>[a-zA-Z0-9: _]*)/?$', 'boston_disorder.views.calls')
+    url(r'boston/?$', 'boston_disorder.views.crm'),
+    url(r'boston/physical/(?P<l1>[a-zA-Z0-9: _]*)/?$', 'boston_disorder.views.crm'),
+    url(r'boston/social/(?P<l1>[a-zA-Z0-9: _]*)/?$', 'boston_disorder.views.calls'),
+    url(r'boston/more_info/?$', 'boston_disorder.views.more_info')
 
 )

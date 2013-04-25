@@ -12,6 +12,7 @@ from geopy import geocoders
 import time
 import datetime
 import math
+from django.db.models import Q
 
 DISTRICT_NAMES = {
 	'1': 'Allston/Brighton',
@@ -92,6 +93,20 @@ PRIVATE_CODES = HOUSING_ISSUES_CODES + BIG_BUILDINGS_CODES + UNCIVIL_USE_OF_SPAC
 PUBLIC_CODES = GRAFFITI_CODES + TRASH_CODES
 PHYSICAL_DISORDER_CODES = PRIVATE_CODES + PUBLIC_CODES
 
+PUBLIC_SOCIAL_DISORDER = {"socdis":True}
+SOCIAL_STRIFE = {"socstrife":True}
+ALCOHOL = {"alcohol":True}
+INTERPERSONAL_VIOLENCE = {"violence":True}
+GUNS = {"guns":True}
+MAJOR_MEDICAL_EMERGENCIES = {"majormed":True}
+RESPIRATORY_AND_OBGYN = {"youthhealth":True}
+NO_MED = {"majormed":True, "no_med":False}
+
+SOCIAL_DISORDER = Q(**PUBLIC_SOCIAL_DISORDER) | Q(**SOCIAL_STRIFE) | Q(**ALCOHOL)
+VIOLENCE = Q(**INTERPERSONAL_VIOLENCE) | Q(**GUNS)
+MEDICAL_EMERGENCIES = Q(**MAJOR_MEDICAL_EMERGENCIES) | Q(**RESPIRATORY_AND_OBGYN) | Q(**NO_MED)
+ALL_911_CALLS = Q(SOCIAL_DISORDER) | Q(VIOLENCE) | Q(MEDICAL_EMERGENCIES)
+
 FILTER_DICT = {
 	"physical_disorder":PHYSICAL_DISORDER_CODES,
 	"public":PUBLIC_CODES,
@@ -101,21 +116,59 @@ FILTER_DICT = {
 	"big_buildings":BIG_BUILDINGS_CODES,
 	"graffiti":GRAFFITI_CODES,
 	"trash":TRASH_CODES,
-	"medical_emergency":("medemerg1",True),
-	"social_disorder":("socdis",True),
-	"socstrife":("socstrife",True),
-	"alcohol":("alcohol",True),
-	"violence":("violence",True),
-	"guns":("guns",True),
-	"home_invasion":("homeinv",True)
+	"social_disorder":SOCIAL_DISORDER,
+	"all_911_calls":ALL_911_CALLS,
+	"public_social_disorder":PUBLIC_SOCIAL_DISORDER,
+	"socstrife":SOCIAL_STRIFE,
+	"alcohol":ALCOHOL,
+	"violence":VIOLENCE,
+	"interpersonal_violence":INTERPERSONAL_VIOLENCE,
+	"guns":GUNS,
+	"medical_emergency":MEDICAL_EMERGENCIES,
+	"major_medical_emergency":MAJOR_MEDICAL_EMERGENCIES,
+	"youth_health":RESPIRATORY_AND_OBGYN,
+	"no_med":NO_MED
+}
+
+TYPE_DISPLAY_NAMES = {
+	"physical_disorder":"Physical Disorder",
+	"public":"Public Denigration",
+	"private":"Private Neglect",
+	"housing":"Housing Issues",
+	"uncivil_use":"Uncivil Use of Space",
+	"big_buildings":"Big Building Complaints",
+	"graffiti":"Graffiti",
+	"trash":"Trash",
+	"all_911_calls":"911 Calls",
+	"social_disorder":"Social Disorder",
+	"socstrife":"Social Strife",
+	"alcohol":"Alcohol",
+	"violence":"Violence",
+	"guns":"Guns",
+	"medical_emergency":"Medical Emergencies",
+	"youth_health":"Youth Health",
+	"major_medical_emergency":"Major Medical",
+	"no_med":"No Med"
 }
 
 
 def crm(request, l1=None):
 	dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime.date) else None
-	filter_args = dict((key[2:], item) for key, item in request.GET.items() if key.startswith('f_'))
+	filter_args = {}#dict((key[2:], item) for key, item in request.GET.items() if key.startswith('f_'))
+	for key, item in request.GET.items():
+		if key.startswith('f_'):
+			if key.endswith("__in") and item.startswith("list("):
+				item = [x.strip() for x in item[5:-1].split(",")]
+			filter_args[key[2:]] = item
+
 	show_details = request.GET.get('show_details', False)
-	granularity = request.GET.get('granularity', "Block Group")
+	if request.GET.get('granularity'):
+		granularity = request.GET.get('granularity')
+		is_default = False
+	else:
+		granularity = "Block Group"
+		is_default = True
+
 	map_type = request.GET.get('map_type', "heat_map")
 
 	remove_block_group = lambda x:x[:12]+x[13:]
@@ -130,8 +183,7 @@ def crm(request, l1=None):
 
 
 	address_to_coordinates = None
-	#address_to_coordinates = (dict((x['address'], x) for x in 
-	#								AddressLatLog.objects.values("address", "latitude", "longitude")))
+
 	blocks_to_coordinates = (dict((x['areaid'], x) for x in
 									TigerData.objects.filter(type=granularity)
 									.values("areaid", "latitude", "longitude")))
@@ -157,13 +209,9 @@ def crm(request, l1=None):
 	data = {}
 	if l1:
 		crm_filter = FILTER_DICT.get(l1)
+		display_type = TYPE_DISPLAY_NAMES.get(l1)
 		crm = (crm.filter(type__in=crm_filter).values('location', 'city', 'state', 'open_dt', 
 					'reason', 'subject', 'type', 'nsa_name', 'bg_id', 'blk_id', 'ct_id'))
-		# neighborhoods = ([{"bg_id":info['bg_id'],"nsa_name":info['nsa_name'], "count":info['pk__count'],
-		# 					"ct_id":info['ct_id'], "pop":bgs.get(info['bg_id'])} for info in 
-		# 					crm.values("bg_id").distinct().annotate(Count('pk'))
-		# 						.values("nsa_name","pk__count","bg_id", "ct_id")
-		# 						 if info['bg_id'] is not None])
 		areas = []
 		mean = None
 		std_dev = None
@@ -179,47 +227,37 @@ def crm(request, l1=None):
 									 if info[area_identifier] is not None]
 					if area_identifier else [])
 
-			i=0
-			for area in areas:
-				if not area["coordinates"]:
-					i+=1
-					print "**%s, %s, %s"%(i,area['nsa_name'], area['areaid'])
-
-			counts = [x['pk__count'] for x in 
-						(BostonCRM.objects.filter(type__in=crm_filter)
-						 .values(area_identifier).distinct().annotate(Count('pk'))
-						 .values("pk__count").order_by('pk__count'))]
-			mean = sum(counts, 0.0) / len(counts)
+			counts = list(x['count'] for x in areas)
+			mean = sum(counts, 0.0) / len(counts) if counts else 0
 			d = [ (i - mean) ** 2 for i in counts]
-			std_dev = math.sqrt(sum(d) / len(d))
-
+			std_dev = math.sqrt(sum(d) / len(d)) if d else 0
+			
 			z = len(counts)
-			lower_interquartile_range = counts[z/4]
-			median = counts[z/2]
-			v = counts[(z * 3)/4]
-
-		# min_area = None
-		# max_area = None
-		# for area in areas:
-		# 	if min_area is None or area["count"] < min_area:
-		# 		min_area = area["count"]
-		# 	if max_area is None or area["count"] > max_area:
-		# 		max_area = area["count"]
+			if z >=4:
+				lower_interquartile_range = counts[z/4]
+				median = counts[z/2]
+				v = counts[(z * 3)/4]
 
 		locations = []
 		for i, entry in enumerate(crm):
 			res = {}
+			areaid = get_areaid(entry)		
 			address = "%s, %s, %s"%(entry['location'], entry['city'], entry['state'])
-			areaid = get_areaid(entry)
-			
+			address_coordinate = None
+			if is_default or not areaid:
+				if address_to_coordinates is None:
+					address_to_coordinates = (dict((x['address'], x) for x in 
+									AddressLatLog.objects.values("address", "latitude", "longitude")))
+				address_coordinates = address_to_coordinates.get(address)
+				res['address_latitude'] = float(address_coordinates['latitude']) if address_coordinates else None
+				res['address_longitude'] = float(address_coordinates['longitude']) if address_coordinates else None
+	
 			if areaid: 
 				coordinates = blocks_to_coordinates.get(areaid)
 			else:
 				areaid = address
-				if address_to_coordinates is None:
-					address_to_coordinates = (dict((x['address'], x) for x in 
-									AddressLatLog.objects.values("address", "latitude", "longitude")))
-				coordinates = address_to_coordinates.get(address)
+				coordinates = address_coordinates
+
 			if coordinates:
 				res['latitude'] = float(coordinates['latitude'])
 				res['longitude'] = float(coordinates['longitude'])
@@ -240,25 +278,37 @@ def crm(request, l1=None):
 			res['subject'] = "%s, %s"%(entry['subject'],entry['reason'])
 			res['type'] = "%s"%entry['type']
 			locations.append(res)
-		locations = sorted(locations, key=lambda x: x['address'])
+		locations = sorted(locations, key=lambda x: (x['address'], x['date']))
 
 		data = json.dumps({'locations':locations,'area_info':areas, #'areas':neighborhoods,
 						   'show_details':show_details, 'granularity':granularity, 
 						   'area_identifier':area_identifier, 'mean':mean, 'std_dev':std_dev,
 						   'map_type':map_type, 'lower_interquartile_range':lower_interquartile_range,
-						   	'upper_interquartile_range':upper_interquartile_range, 'median':median},
+						   'upper_interquartile_range':upper_interquartile_range, 'median':median,
+						   'is_default':is_default},
 						    default=dthandler)
 
 		return render_to_response('map.html',
-								 {'data':data, 'type':l1, 'granularity':granularity, 'map_type':map_type},
+								 {'data':data, 'type':l1, 'granularity':granularity, 'map_type':map_type,
+								  'display_type':display_type, 'data_type':'Physical'},
 								  context_instance=RequestContext(request))
 	return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
 
 def calls(request, l1=None):
 	dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime.date) else None
 	filter_args = dict((key[2:], item) for key, item in request.GET.items() if key.startswith('f_'))
+	for key, item in request.GET.items():
+		if key.startswith('f_'):
+			if key.endswith("__in") and item.startswith("list("):
+				item = [x.strip() for x in item[5:-1].split(",")]
+			filter_args[key[2:]] = item
 	show_details = request.GET.get('show_details', False)
-	granularity = request.GET.get('granularity', "Block Group")
+	if request.GET.get('granularity'):
+		granularity = request.GET.get('granularity')
+		is_default = False
+	else:
+		granularity = "Block Group"
+		is_default = True
 	map_type = request.GET.get('map_type', "heat_map")
 
 	remove_block_group = lambda x:x[:12]+x[13:]
@@ -300,9 +350,15 @@ def calls(request, l1=None):
 	data = {}
 	if l1:
 		call_type = FILTER_DICT.get(l1)
-		filter_args[call_type[0]] = call_type[1]
-		print filter_args
-		calls = (Boston911Calls.objects.filter(**filter_args) if filter_args else Boston911Calls.objects)
+		display_type = TYPE_DISPLAY_NAMES.get(l1)
+
+		if type(call_type) == dict:
+			calls = Boston911Calls.objects.filter(**call_type)
+		else:
+			calls = Boston911Calls.objects.filter(call_type)
+
+		if filter_args: 
+			calls = calls.filter(**filter_args)
 
 		areas = []
 		mean = None
@@ -319,12 +375,6 @@ def calls(request, l1=None):
 									 if info[area_identifier] is not None]
 					if area_identifier else [])
 
-			i=0
-			for area in areas:
-				if not area["coordinates"]:
-					i+=1
-					print "**%s, %s, %s"%(i,area['nsa_name'], area['areaid'])
-
 			counts = [x['count'] for x in areas]
 			if counts:
 				mean = sum(counts, 0.0) / len(counts)
@@ -336,28 +386,26 @@ def calls(request, l1=None):
 				median = counts[z/2]
 				v = counts[(z * 3)/4]
 
-		# min_area = None
-		# max_area = None
-		# for area in areas:
-		# 	if min_area is None or area["count"] < min_area:
-		# 		min_area = area["count"]
-		# 	if max_area is None or area["count"] > max_area:
-		# 		max_area = area["count"]
-
 		locations = []
 		for i, entry in enumerate(calls.values()):
 			res = {}
-			address = "%s"%(entry['match_test'])
+			address = "%s"%(entry['match_text'])
 			areaid = get_areaid(entry)
-			
+
+			if is_default:
+				if address_to_coordinates is None:
+					address_to_coordinates = (dict((x['address'], x) for x in 
+									AddressLatLog.objects.values("address", "latitude", "longitude")))
+				address_coordinates = address_to_coordinates.get(address)
+				res['address_latitude'] = float(address_coordinates['latitude']) if address_coordinates else None
+				res['address_longitude'] = float(address_coordinates['longitude']) if address_coordinates else None
+
 			if areaid: 
 				coordinates = blocks_to_coordinates.get(areaid)
 			else:
 				areaid = address
-				if address_to_coordinates is None:
-					address_to_coordinates = (dict((x['address'], x) for x in 
-									AddressLatLog.objects.values("address", "latitude", "longitude")))
-				coordinates = address_to_coordinates.get(address)
+				coordinates = address_coordinates
+			
 			if coordinates:
 				res['latitude'] = float(coordinates['latitude'])
 				res['longitude'] = float(coordinates['longitude'])
@@ -369,7 +417,7 @@ def calls(request, l1=None):
 				item = AddressLatLog(address=address, latitude=res['latitude'],
 				 				longitude=res['longitude'])
 				item.save()
-				time.sleep(.2)
+				time.sleep(0.5)
 
 			res['date'] = entry['close_dt']
 			res['bg_id'] = str(entry['bg_id'])
@@ -378,59 +426,22 @@ def calls(request, l1=None):
 			res['subject'] = "Subject"
 			res['type'] = "%s"%entry['type_desc']
 			locations.append(res)
+		locations = sorted(locations, key=lambda x: (x['address'], x['date']))
 
 		data = json.dumps({'locations':locations,'area_info':areas, #'areas':neighborhoods,
 						   'show_details':show_details, 'granularity':granularity, 
 						   'area_identifier':area_identifier, 'mean':mean, 'std_dev':std_dev,
 						   'map_type':map_type, 'lower_interquartile_range':lower_interquartile_range,
-						   	'upper_interquartile_range':upper_interquartile_range, 'median':median},
+						   'upper_interquartile_range':upper_interquartile_range, 'median':median,
+						   'is_default':is_default},
 						    default=dthandler)
 
 		return render_to_response('map.html',
-						{'data':data,'type':l1, 'granularity':granularity, 'map_type':map_type},
+						{'data':data,'type':l1, 'granularity':granularity, 'map_type':map_type,
+						 'display_type':display_type, 'data_type':'Social'},
 						 context_instance=RequestContext(request))
 	return render_to_response('map.html',{'data':data}, context_instance=RequestContext(request))
 
+def more_info(request):
+	return render_to_response('more_info.html',{}, context_instance=RequestContext(request))
 
-"""
-def crm_tree(request, l1):
-	data = []
-	filter_args = dict((key[2:], item) for key, item in request.GET.items() if key.startswith('f_'))
-	crm = (BostonCRM.objects.filter(**filter_args) if filter_args else BostonCRM.objects)
-	bgs = (dict((x['bg_id'], x['totalpop']) for x in 
-				BostonBlockGroup.objects.values("totalpop", "bg_id", "nbhdCRM")))
-	if l1:
-		crm_filter = FILTER_DICT.get(l1)
-		crm = (crm.filter(type__in=crm_filter)
-					.values('neighborhood', "bg_id"))
-		neighborhood_counts = defaultdict(lambda : defaultdict(int))
-		#neighborhood_counts = defaultdict(int)
-		neighborhood_populations = defaultdict(float)
-		columns = ["Location", "Parent", "Inspection Violation Count", "Color"]
-		boston = ["Boston Area", '', 0, 0]
-		data.append(columns)
-		data.append(boston)
-		for i, entry in enumerate(crm):
-			neighborhood = entry['neighborhood']
-			bg_id = entry['bg_id']
-			if neighborhood:
-				neighborhood_counts[neighborhood][bg_id] += 1
-				neighborhood_populations[neighborhood] += bgs.get(bg_id, 0.0)
-				#neighborhood_counts[entry['neighborhood']] += 1
-		for neighborhood, count in neighborhood_counts.items():
-			n_sum = sum(count.values())
-			n_pop = neighborhood_populations[neighborhood]
-			n_color = float(n_sum) / n_pop
-			if neighborhood:
-				print "%s, %s"%(neighborhood, n_color)
-				data.append([str(neighborhood), "Boston Area", n_sum , n_color])
-
-		for neighborhood, bg_info in neighborhood_counts.items():
-			for bg_id, count in bg_info.items():
-				population =  bgs.get(bg_id)
-				color = count / population if population else 0
-				if bg_id:
-					print "%s, %s"%(bg_id, color)
-					data.append([str("%s_%s"%(bg_id,neighborhood)), str(neighborhood), count, color])
-	return render_to_response('tree_map.html',{'data':data}, context_instance=RequestContext(request))
-	"""
