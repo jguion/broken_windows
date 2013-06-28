@@ -98,12 +98,13 @@ if __name__ == '__main__':
                 case_x = float(entry.case_x) if entry.case_x not in ['NULL', '', ' '] else None,
                 case_y = float(entry.case_y) if entry.case_y not in ['NULL', '', ' '] else None,
                 location = unicode(entry.location) if entry.location not in ['NULL', '', ' '] else None,
-                city = unicode(entry.city) if entry.city not in ['NULL', '', ' '] else None,
-                state = unicode(entry.state) if entry.state not in ['NULL', '', ' '] else None,
                 propid = unicode(entry.propid) if entry.propid not in ['NULL', '', ' '] else None,
                 parcel_num = unicode(entry.parcel_num) if entry.parcel_num not in ['NULL', '', ' '] else None,
                 neighborhood = unicode(entry.neighborhood) if entry.neighborhood not in ['NULL', '', ' '] else None,
+                location_zip = unicode(entry.location_zip) if entry.location_zip not in ['NULL', '', ' '] else None,
                 channel_type = unicode(entry.channel_type) if entry.channel_type not in ['NULL', '', ' '] else None,
+                reporter_city = unicode(entry.reporter_city) if entry.reporter_city not in ['NULL', '', ' '] else None,
+                reporter_zip = unicode(entry.reporter_zip) if entry.reporter_zip not in ['NULL', '', ' '] else None,
                 party_id = int(entry.party_id) if entry.party_id not in ['NULL', '', ' '] else None,
                 source = unicode(entry.source) if entry.source not in ['NULL', '', ' '] else None,
                 locationid = int(entry.locationid) if entry.locationid not in ['NULL', '', ' '] else None,
@@ -127,8 +128,6 @@ if __name__ == '__main__':
                 privateneglect = bool(int(entry.privateneglect)) if entry.privateneglect not in ['NULL', '', ' '] else None,
                 problem = bool(int(entry.problem)) if entry.problem not in ['NULL', '', ' '] else None,
                 publicdenig = bool(int(entry.publicdenig)) if entry.publicdenig not in ['NULL', '', ' '] else None,
-                my = int(entry.my) if entry.my not in ['NULL', '', ' '] else None,
-                bg = bool(int(entry.bg)) if entry.bg not in ['NULL', '', ' '] else None)
             new_entry.save()
             if not i % 200:
                 print i
