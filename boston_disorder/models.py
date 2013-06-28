@@ -14,12 +14,13 @@ class CRM(models.Model):
     case_x = models.CharField(max_length=200, null=True) #float
     case_y = models.CharField(max_length=200, null=True) #float
     location = models.CharField(max_length=200, null=True)
-    city = models.CharField(max_length=200, null=True)
-    state = models.CharField(max_length=200, null=True)
     propid = models.CharField(max_length=200, null=True)
     parcel_num = models.CharField(max_length=200, null=True)
     neighborhood = models.CharField(max_length=200, null=True)
+    location_zip = models.CharField(max_length=200, null=True)
     channel_type = models.CharField(max_length=200, null=True)
+    reporter_city = models.CharField(max_length=200, null=True)
+    reporter_zip = models.CharField(max_length=200, null=True)
     party_id = models.CharField(max_length=200, null=True) #int
     source = models.CharField(max_length=200, null=True)
     locationid = models.CharField(max_length=200, null=True) #int
@@ -43,8 +44,6 @@ class CRM(models.Model):
     privateneglect = models.CharField(max_length=200, null=True)#bool
     problem = models.CharField(max_length=200, null=True)#bool
     publicdenig = models.CharField(max_length=200, null=True)#bool
-    my = models.CharField(max_length=200, null=True)#bool
-    bg = models.CharField(max_length=200, null=True)#bool
 
 class BlockGroup(models.Model):
     objectid = models.CharField(max_length=200, null=True) #int
@@ -133,12 +132,13 @@ class CSVCRM(CsvModel):
     case_x = fields.CharField() #float
     case_y = fields.CharField() #float
     location = fields.CharField()
-    city = fields.CharField()
-    state = fields.CharField()
     propid = fields.CharField()
     parcel_num = fields.CharField()
     neighborhood = fields.CharField()
+    location_zip =fields.CharField()
     channel_type = fields.CharField()
+    reporter_city = fields.CharField()
+    reporter_zip = fields.CharField()
     party_id = fields.CharField() #int
     source = fields.CharField()
     locationid = fields.CharField() #int
@@ -162,8 +162,6 @@ class CSVCRM(CsvModel):
     privateneglect = fields.CharField()#bool
     problem = fields.CharField()#bool
     publicdenig = fields.CharField()#bool
-    my = fields.CharField()
-    bg = fields.CharField()
 
     class Meta:
         delimiter = ","
@@ -261,12 +259,13 @@ class BostonCRM(models.Model):
     case_x = models.FloatField(null=True) #float
     case_y = models.FloatField(null=True) #float
     location = models.CharField(max_length=200, null=True)
-    city = models.CharField(max_length=200, null=True)
-    state = models.CharField(max_length=200, null=True)
     propid = models.CharField(max_length=200, null=True)
     parcel_num = models.CharField(max_length=200, null=True)
     neighborhood = models.CharField(max_length=200, null=True)
+    location_zip = models.CharField(max_length=200, null=True)
     channel_type = models.CharField(max_length=200, null=True)
+    reporter_city = models.CharField(max_length=200, null=True)
+    reporter_zip = models.CharField(max_length=200, null=True)
     party_id = models.IntegerField(null=True) #int
     source = models.CharField(max_length=200, null=True)
     locationid = models.IntegerField(null=True) #int
@@ -290,8 +289,6 @@ class BostonCRM(models.Model):
     privateneglect = models.BooleanField(default=False)#bool
     problem = models.BooleanField(default=False)#bool
     publicdenig = models.BooleanField(default=False)#bool
-    my = models.IntegerField(null=True) #int
-    bg = models.BooleanField(default=False)#bool
 
 class BostonBlockGroup(models.Model):
     objectid = models.IntegerField(null=True) #int
