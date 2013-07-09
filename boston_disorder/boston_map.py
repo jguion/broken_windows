@@ -195,6 +195,9 @@ class BostonMap:
 		#Initialize dictionary of addresses to lat & long
 		self.address_to_coordinates = None
 
+		#Initialize dictionary of prop ids to lat & long
+		self.propid_to_coordinates = None
+
 		#Find population and area of block groups
 		self.bg_population = (dict((x['bg_id'], (x['totalpop'], x['popden'], x['area'])) for x in (BostonBlockGroup.objects
 													.values("totalpop", "bg_id", "popden", "area"))))
@@ -209,7 +212,7 @@ class BostonMap:
 		if data_type == "crm":
 			crm = (BostonCRM.objects.filter(**filter_args) if filter_args else BostonCRM.objects)
 			self.crm = (crm.filter(type__in=map_filter)
-						   .values('location', 'city', 'state', 'open_dt', 'reason', 'subject',
+						   .values('location', 'open_dt', 'reason', 'subject', 'propid',
 						   		   'type', 'nsa_name', 'bg_id', 'blk_id', 'ct_id'))
 		elif data_type == "cad":
 			if type(map_filter) == dict:
@@ -242,16 +245,21 @@ class BostonMap:
 	#used to populate address level information / additional details
 	def get_crm_data(self):
 		locations = []
+		misses = 0
 		for i, entry in enumerate(self.crm):
 			res = {}
 			areaid = self.get_areaid(entry)		
-			address = "%s, %s, %s"%(entry['location'], entry['city'], entry['state'])
+			address = entry['location']
 			address_coordinate = None
 			if self.use_addresses and self.is_default or not areaid:
-				if self.address_to_coordinates is None:
-					self.address_to_coordinates = (dict((x['address'], x) for x in 
-									AddressLatLog.objects.values("address", "latitude", "longitude")))
-				address_coordinates = self.address_to_coordinates.get(address)
+				#if self.address_to_coordinates is None:
+				#	self.address_to_coordinates = (dict((x['address'], x) for x in 
+				#					AddressLatLog.objects.values("address", "latitude", "longitude")))
+				#address_coordinates = self.address_to_coordinates.get(address)
+				if self.propid_to_coordinates is None:
+					self.propid_to_coordinates = dict((x['propid'], x) for x in 
+									PropIdLatLong.objects.values("propid", "latitude", "longitude"))
+				address_coordinates = self.propid_to_coordinates.get(entry['propid'])
 				res['address_latitude'] = float(address_coordinates['latitude']) if address_coordinates else None
 				res['address_longitude'] = float(address_coordinates['longitude']) if address_coordinates else None
 	
@@ -264,15 +272,25 @@ class BostonMap:
 			if coordinates:
 				res['latitude'] = float(coordinates['latitude'])
 				res['longitude'] = float(coordinates['longitude'])
+				#print "%s %s %s"%(i, res['latitude'], res['longitude'])
+			elif address is None:
+				#print "Bad %s"%i
+				pass
 			else:
+				misses += 1
 				continue
 				res = utils.get_lat_long(address)
+				print i, res
 				if not res:
 					continue
-				item = AddressLatLog(address=address, latitude=res['latitude'],
-				 				longitude=res['longitude'])
+				item = PropIdLatLong(propid=entry['propid'],
+									 address=address, 
+									 latitude=res['latitude'],
+				 					 longitude=res['longitude'])
+				#item = AddressLatLog(address=address, latitude=res['latitude'],
+				# 				longitude=res['longitude'])
 				item.save()
-				time.sleep(.2)
+				time.sleep(.5)
 
 			res['date'] = entry['open_dt']
 			res['bg_id'] = str(entry['bg_id'])
@@ -285,6 +303,7 @@ class BostonMap:
 			locations = sorted(locations, key=lambda x: (x['date']))
 		else:
 			locations = sorted(locations, key=lambda x: (x['address'], x['date']))
+		#print "MISSES %s"%misses
 		return locations
 				
 	#Gets a list of dictionaries of information from each area group
@@ -310,16 +329,21 @@ class BostonMap:
 	#used to populate address level information / additional details
 	def get_cad_locations(self):
 		locations = []
+		misses = 0 
 		for i, entry in enumerate(self.cad.values()):
 			res = {}
-			address = "%s"%(entry['match_text'])
+			address = "%s"%(entry['inf_addr'])
 			areaid = self.get_areaid(entry)
 
 			if self.is_default:
-				if self.address_to_coordinates is None:
-					self.address_to_coordinates = (dict((x['address'], x) for x in 
-									AddressLatLog.objects.values("address", "latitude", "longitude")))
-				address_coordinates = self.address_to_coordinates.get(address)
+				#if self.address_to_coordinates is None:
+				#	self.address_to_coordinates = (dict((x['address'], x) for x in 
+				#					AddressLatLog.objects.values("address", "latitude", "longitude")))
+				#address_coordinates = self.address_to_coordinates.get(address)
+				if self.propid_to_coordinates is None:
+					self.propid_to_coordinates = dict((x['propid'], x) for x in 
+									PropIdLatLong.objects.values("propid", "latitude", "longitude"))
+				address_coordinates = self.propid_to_coordinates.get(entry['propid'])
 				res['address_latitude'] = float(address_coordinates['latitude']) if address_coordinates else None
 				res['address_longitude'] = float(address_coordinates['longitude']) if address_coordinates else None
 
@@ -332,13 +356,20 @@ class BostonMap:
 			if coordinates:
 				res['latitude'] = float(coordinates['latitude'])
 				res['longitude'] = float(coordinates['longitude'])
+				#print i
 			else:
+				misses += 1
 				continue
-				res = utils.get_lat_long(address)
+				res = utils.get_lat_long("%s, Boston MA"%address)
+				print i, res
 				if not res:
 					continue
-				item = AddressLatLog(address=address, latitude=res['latitude'],
-				 				longitude=res['longitude'])
+				item = PropIdLatLong(propid=entry['propid'],
+									 address=address, 
+									 latitude=res['latitude'],
+				 					 longitude=res['longitude'])
+				#item = AddressLatLog(address=address, latitude=res['latitude'],
+				# 				longitude=res['longitude'])
 				item.save()
 				time.sleep(0.5)
 
@@ -349,7 +380,8 @@ class BostonMap:
 			res['subject'] = "Subject"
 			res['type'] = "%s"%entry['type_desc']
 			locations.append(res)
-		locations = sorted(locations, key=lambda x: (x['address'], x['date']))
+		locations = sorted(locations, key=lambda x: (x['address'], x['date'] or datetime.date.min))
+		#print "MISSES %s"%misses
 		return locations
 
 	#Gets a list of dictionaries of information from each area group

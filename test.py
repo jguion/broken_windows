@@ -400,7 +400,7 @@ if __name__ == '__main__':
         except Exception as e:
             print e
 t = CSVCalls.import_data(data = open("/Users/jeffreyguion/Documents/Code/city_of_boston/other_data/CADCalls.csv"))
-"""
+
     calls = Calls.objects.all()
     errors = []
     for i, call in enumerate(calls[1:]):
@@ -446,7 +446,7 @@ t = CSVCalls.import_data(data = open("/Users/jeffreyguion/Documents/Code/city_of
         except Exception as e:
             print e
 
-"""
+
 i = 17159
 tiger = TigerData.objects.all()
 while i >= 10231:
@@ -458,4 +458,122 @@ while i >= 10231:
         td.delete()
     i -= 1
 """
+
+    all_addresses = AddressLatLog.objects.values_list("address", "latitude", "longitude")
+    all_dict1 = dict((x[0], x) for x in all_addresses)
+    all_dict2 = {}
+    a_dict = defaultdict(list)
+    pll_dict = {}
+    duplicate_count = 0
+    different_lat_count = 0
+    different_long_count = 0
+    for a, lat, lng in all_addresses:
+        info = a.lower().split(',')
+        address = None
+        city = None
+        state = None
+        zipcode = None
+        if len(info) <= 1:
+            info = a.lower().split('  ')
+
+        address = info[0].strip()
+        a_dict[address].append((a,lat,lng))
+        if len(info) > 1:
+            city = info[1].strip()
+            if all_dict2.get((address, city)):
+                latitude, longitude = all_dict2.get((address, city))
+                duplicate_count += 1
+                if latitude != lat:
+                    #print "%s -- %s ... Old Lat %s , New Lat %s"%(address, city, latitude, lat)
+                    different_lat_count += 1
+                if longitude != lng:
+                    #print "%s -- %s ... Old long %s , New long %s"%(address, city, longitude, lng)
+                    different_long_count += 1
+            else:
+                all_dict2[(address,city)] = (lat,lng)
+
+            if len(info) > 2:
+                state = info[2].strip()
+                if len(info) > 3:
+                    zipcode = info[3].strip()
+
+    #for a, info in a_dict.items():
+    #    if len(info) > 1:
+    #        print info
+
+
+    miss_count = 0
+    bad_count = 0
+    crm = BostonCRM.objects.values_list('location', 'propid')
+    for location, propid in crm:
+        if not location or not propid:
+            bad_count += 1
+            continue
+        info = location.lower().split('  ')
+        address = info[0].strip()
+        if len(info) > 1:
+            city = info[1].strip()
+
+            lat, lng = all_dict2.get((address, city), (None,None))
+            if lat is None or lng is None:
+                attempt = a_dict[address]
+                if attempt:
+                    lat = attempt[0][1]
+                    lng = attempt[0][2]
+                    pll_dict[propid] = (location,lat,lng)
+                else:
+                    miss_count += 1
+            else:
+                pll_dict[propid] = (location,lat,lng)
+        else:
+            bad_count += 1
+
+    cad = Boston911Calls.objects.values_list('inf_addr', 'propid')
+    bad_cad = 0
+    cad_miss = 0
+    for location, propid in cad:
+        if not location or not propid:
+            bad_cad += 1
+            continue
+        info = location.lower().split('  ')
+        address = info[0].strip()
+
+        attempt = a_dict[address]
+        if attempt:
+            lat = attempt[0][1]
+            lng = attempt[0][2]
+            pll_dict[propid] = (location, lat,lng)
+        else:
+            cad_miss += 1
+
+    i =0
+    for propid, info in pll_dict.items():
+        p = PropIdLatLong(
+            propid=propid,
+            address=info[0],
+            latitude=info[1],
+            longitude=info[2])
+        p.save()
+        if i % 300:
+            print i
+        i += 1
+
+
+    print "***Done****"
+    print "DUPLICATES = %s"%duplicate_count
+    print "diff lats = %s"%different_lat_count
+    print "diff long = %s"%different_long_count
+
+    print "crm misses %s"%miss_count
+    print "crm bad locations %s"%bad_count
+
+    print "cad misses %s"%cad_miss
+    print "cad bad locations %s"%bad_cad
+    print len(all_addresses)
+    print len(all_dict2)
+    print len(pll_dict)
+
+
+
+
 
