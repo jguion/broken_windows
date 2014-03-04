@@ -209,12 +209,12 @@ class BostonMap:
 		self.crm = []
 		self.cad = []
 		#populated selected data model and apply all relevent filters
-		if data_type == "crm":
+		if map_filter and data_type == "crm":
 			crm = (BostonCRM.objects.filter(**filter_args) if filter_args else BostonCRM.objects)
 			self.crm = (crm.filter(type__in=map_filter)
 						   .values('location', 'open_dt', 'reason', 'subject', 'propid',
 						   		   'type', 'nsa_name', 'bg_id', 'blk_id', 'ct_id'))
-		elif data_type == "cad":
+		elif map_filter and data_type == "cad":
 			if type(map_filter) == dict:
 				cad = Boston911Calls.objects.filter(**map_filter)
 			else:
@@ -322,7 +322,7 @@ class BostonMap:
 								   .values("nsa_name","pk__count",self.area_identifier, 'bg_id')
 								   .order_by('-pk__count')
 						  if info[self.area_identifier] is not None]
-					if self.area_identifier else [])
+					if self.area_identifier and self.crm else [])
 		return areas
 
 	#Gets a list of dictionarys of information from each cad row
@@ -400,7 +400,7 @@ class BostonMap:
 								  .values("nsa_name","pk__count",self.area_identifier, 'bg_id')
 								  .order_by('-pk__count')
 						if info[self.area_identifier] is not None]
-					if self.area_identifier else [])
+					if self.area_identifier and self.cad else [])
 		return areas
 
 
