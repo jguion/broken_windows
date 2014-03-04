@@ -14,12 +14,13 @@ class CRM(models.Model):
     case_x = models.CharField(max_length=200, null=True) #float
     case_y = models.CharField(max_length=200, null=True) #float
     location = models.CharField(max_length=200, null=True)
-    city = models.CharField(max_length=200, null=True)
-    state = models.CharField(max_length=200, null=True)
     propid = models.CharField(max_length=200, null=True)
     parcel_num = models.CharField(max_length=200, null=True)
     neighborhood = models.CharField(max_length=200, null=True)
+    location_zip = models.CharField(max_length=200, null=True)
     channel_type = models.CharField(max_length=200, null=True)
+    reporter_city = models.CharField(max_length=200, null=True)
+    reporter_zip = models.CharField(max_length=200, null=True)
     party_id = models.CharField(max_length=200, null=True) #int
     source = models.CharField(max_length=200, null=True)
     locationid = models.CharField(max_length=200, null=True) #int
@@ -43,8 +44,6 @@ class CRM(models.Model):
     privateneglect = models.CharField(max_length=200, null=True)#bool
     problem = models.CharField(max_length=200, null=True)#bool
     publicdenig = models.CharField(max_length=200, null=True)#bool
-    my = models.CharField(max_length=200, null=True)#bool
-    bg = models.CharField(max_length=200, null=True)#bool
 
 class BlockGroup(models.Model):
     objectid = models.CharField(max_length=200, null=True) #int
@@ -82,34 +81,56 @@ class BlockGroup(models.Model):
 
 class Calls(models.Model):
     inc_no = models.CharField(max_length=200, null=True)
-    inf_addr = models.CharField(max_length=200, null=True)
-    match_text = models.CharField(max_length=200, null=True)
-    propid = models.CharField(max_length=200, null=True)
+    sam_id = models.CharField(max_length=200, null=True)
+    prop_type = models.CharField(max_length=200, null=True)
+    disp_grp = models.CharField(max_length=200, null=True)
     type = models.CharField(max_length=200, null=True)
-    model_type = models.CharField(max_length=200, null=True)
     priority = models.CharField(max_length=200, null=True)
     close_dt = models.CharField(max_length=200, null=True)
-    type_desc = models.CharField(max_length=200, null=True)
+    entry_dt = models.CharField(max_length=200, null=True)
+    disp_dt = models.CharField(max_length=200, null=True)
+    enrte_dt = models.CharField(max_length=200, null=True)
+    onscene_dt = models.CharField(max_length=200, null=True)
+    recieve_dt = models.CharField(max_length=200, null=True)
+    all_wait_tm = models.CharField(max_length=200, null=True)
+    all_entre_tm = models.CharField(max_length=200, null=True)
+    all_onscene_tm = models.CharField(max_length=200, null=True)
+    all_dsip_tm = models.CharField(max_length=200, null=True)
+    comp_src = models.CharField(max_length=200, null=True)
+    clss = models.CharField(max_length=200, null=True)
+    inf_addr = models.CharField(max_length=200, null=True)
+    var20 = models.CharField(max_length=200, null=True)
+    propid = models.CharField(max_length=200, null=True)
     locationid = models.CharField(max_length=200, null=True)
-    objectid = models.CharField(max_length=200, null=True)
     ref_id = models.CharField(max_length=200, null=True)
     x = models.CharField(max_length=200, null=True)
     y = models.CharField(max_length=200, null=True)
+    landuse = models.CharField(max_length=200, null=True)
     blk_id = models.CharField(max_length=200, null=True)
     bg_id = models.CharField(max_length=200, null=True)
     ct_id = models.CharField(max_length=200, null=True)
-    nsa_name = models.CharField(max_length=200, null=True)
     nbhd = models.CharField(max_length=200, null=True)
+    nsa_name = models.CharField(max_length=200, null=True)
+    object_id = models.CharField(max_length=200, null=True)
+    model_type = models.CharField(max_length=200, null=True)
+    type_desc = models.CharField(max_length=200, null=True)
+    frequency = models.CharField(max_length=200, null=True)
+    majormed = models.CharField(max_length=200, null=True)
+    youthhealth = models.CharField(max_length=200, null=True)
     socdis = models.CharField(max_length=200, null=True)
     socstrife = models.CharField(max_length=200, null=True)
     alcohol = models.CharField(max_length=200, null=True)
     violence = models.CharField(max_length=200, null=True)
     guns = models.CharField(max_length=200, null=True)
-    no_med = models.CharField(max_length=200, null=True)
-    majormed = models.CharField(max_length=200, null=True)
-    youthhealth = models.CharField(max_length=200, null=True)
+    used = models.CharField(max_length=200, null=True)
 
 class AddressLatLog(models.Model):
+    address = models.CharField(max_length=200, null=True)
+    latitude = models.CharField(max_length=200, null=True)
+    longitude = models.CharField(max_length=200, null=True)
+
+class PropIdLatLong(models.Model):
+    propid = models.CharField(primary_key=True, max_length=200)
     address = models.CharField(max_length=200, null=True)
     latitude = models.CharField(max_length=200, null=True)
     longitude = models.CharField(max_length=200, null=True)
@@ -133,12 +154,13 @@ class CSVCRM(CsvModel):
     case_x = fields.CharField() #float
     case_y = fields.CharField() #float
     location = fields.CharField()
-    city = fields.CharField()
-    state = fields.CharField()
     propid = fields.CharField()
     parcel_num = fields.CharField()
     neighborhood = fields.CharField()
+    location_zip =fields.CharField()
     channel_type = fields.CharField()
+    reporter_city = fields.CharField()
+    reporter_zip = fields.CharField()
     party_id = fields.CharField() #int
     source = fields.CharField()
     locationid = fields.CharField() #int
@@ -162,8 +184,6 @@ class CSVCRM(CsvModel):
     privateneglect = fields.CharField()#bool
     problem = fields.CharField()#bool
     publicdenig = fields.CharField()#bool
-    my = fields.CharField()
-    bg = fields.CharField()
 
     class Meta:
         delimiter = ","
@@ -219,32 +239,48 @@ class CSVTigerData(CsvModel):
 
 class CSV911Calls(CsvModel):
     inc_no = fields.CharField()
-    inf_addr = fields.CharField()
-    match_text = fields.CharField()
-    propid = fields.CharField()
+    sam_id = fields.CharField()
+    prop_type = fields.CharField()
+    disp_grp = fields.CharField()
     type = fields.CharField()
-    model_type = fields.CharField()
     priority = fields.CharField()
     close_dt = fields.CharField()
-    type_desc = fields.CharField()
+    entry_dt = fields.CharField()
+    disp_dt = fields.CharField()
+    enrte_dt = fields.CharField()
+    onscene_dt = fields.CharField()
+    recieve_dt = fields.CharField()
+    all_wait_tm = fields.CharField()
+    all_entre_tm = fields.CharField()
+    all_onscene_tm = fields.CharField()
+    all_dsip_tm = fields.CharField()
+    comp_src = fields.CharField()
+    clss = fields.CharField()
+    inf_addr = fields.CharField()
+    var20 = fields.CharField()
+    propid = fields.CharField()
     locationid = fields.CharField()
-    objectid = fields.CharField()
     ref_id = fields.CharField()
     x = fields.CharField()
     y = fields.CharField()
+    landuse = fields.CharField()
     blk_id = fields.CharField()
     bg_id = fields.CharField()
     ct_id = fields.CharField()
-    nsa_name = fields.CharField()
     nbhd = fields.CharField()
+    nsa_name = fields.CharField()
+    object_id = fields.CharField()
+    model_type = fields.CharField()
+    type_desc = fields.CharField()
+    frequency = fields.CharField()
+    majormed = fields.CharField()
+    youthhealth = fields.CharField()
     socdis = fields.CharField()
     socstrife = fields.CharField()
     alcohol = fields.CharField()
     violence = fields.CharField()
     guns = fields.CharField()
-    no_med = fields.CharField()
-    majormed = fields.CharField()
-    youthhealth = fields.CharField()
+    used = fields.CharField()
 
     class Meta:
         delimiter = ","
@@ -252,7 +288,7 @@ class CSV911Calls(CsvModel):
 
 class BostonCRM(models.Model):
     case_enquiry_id = models.IntegerField(null=True) #int
-    case_reference = models.IntegerField(null=True) #int
+    case_reference = models.CharField(max_length=200, null=True)
     open_dt = models.DateField(null=True) #date
     close_dt = models.DateField(null=True) #date
     subject = models.CharField(max_length=200, null=True)
@@ -261,12 +297,13 @@ class BostonCRM(models.Model):
     case_x = models.FloatField(null=True) #float
     case_y = models.FloatField(null=True) #float
     location = models.CharField(max_length=200, null=True)
-    city = models.CharField(max_length=200, null=True)
-    state = models.CharField(max_length=200, null=True)
     propid = models.CharField(max_length=200, null=True)
     parcel_num = models.CharField(max_length=200, null=True)
     neighborhood = models.CharField(max_length=200, null=True)
+    location_zip = models.CharField(max_length=200, null=True)
     channel_type = models.CharField(max_length=200, null=True)
+    reporter_city = models.CharField(max_length=200, null=True)
+    reporter_zip = models.CharField(max_length=200, null=True)
     party_id = models.IntegerField(null=True) #int
     source = models.CharField(max_length=200, null=True)
     locationid = models.IntegerField(null=True) #int
@@ -290,8 +327,6 @@ class BostonCRM(models.Model):
     privateneglect = models.BooleanField(default=False)#bool
     problem = models.BooleanField(default=False)#bool
     publicdenig = models.BooleanField(default=False)#bool
-    my = models.IntegerField(null=True) #int
-    bg = models.BooleanField(default=False)#bool
 
 class BostonBlockGroup(models.Model):
     objectid = models.IntegerField(null=True) #int
@@ -329,30 +364,47 @@ class BostonBlockGroup(models.Model):
 
 class Boston911Calls(models.Model):
     inc_no = models.CharField(max_length=200, null=True)
-    inf_addr = models.CharField(max_length=200, null=True)
-    match_text = models.CharField(max_length=200, null=True)
-    propid = models.CharField(max_length=200, null=True)
+    sam_id = models.IntegerField(null=True)
+    prop_type = models.CharField(max_length=200, null=True)
+    disp_grp = models.CharField(max_length=200, null=True)
     type = models.CharField(max_length=200, null=True)
-    model_type = models.CharField(max_length=200, null=True)
     priority = models.IntegerField(null=True)
     close_dt = models.DateField(null=True)
-    type_desc = models.CharField(max_length=200, null=True)
-    locationid = models.IntegerField(null=True)
-    objectid = models.CharField(max_length=200, null=True)
-    ref_id = models.IntegerField(null=True)
+    entry_dt = models.DateField(null=True)
+    disp_dt = models.DateField(null=True)
+    enrte_dt = models.DateField(null=True)
+    onscene_dt = models.DateField(null=True)
+    recieve_dt = models.DateField(null=True)
+    all_wait_tm = models.IntegerField(null=True)
+    all_entre_tm = models.IntegerField(null=True)
+    all_onscene_tm = models.IntegerField(null=True)
+    all_dsip_tm = models.IntegerField(null=True)
+    comp_src = models.CharField(max_length=200,null=True)
+    clss = models.CharField(max_length=200, null=True)
+    inf_addr = models.CharField(max_length=200, null=True)
+    var20 = models.CharField(max_length=200, null=True)
+    propid = models.CharField(max_length=200, null=True)
+    locationid = models.FloatField(null=True)
+    ref_id = models.FloatField(null=True)
     x = models.FloatField(null=True)
     y = models.FloatField(null=True)
+    landuse = models.CharField(max_length=200, null=True)
     blk_id = models.IntegerField(null=True)
     bg_id = models.IntegerField(null=True)
     ct_id = models.IntegerField(null=True)
-    nsa_name = models.CharField(max_length=200, null=True)
     nbhd = models.CharField(max_length=200, null=True) 
+    nsa_name = models.CharField(max_length=200, null=True)
+    object_id = models.CharField(max_length=200, null=True)
+    model_type = models.CharField(max_length=200, null=True)
+    type_desc = models.CharField(max_length=200, null=True) 
+    frequency = models.IntegerField(null=True)
+    majormed = models.BooleanField(default=False)
+    youthhealth = models.BooleanField(default=False)
     socdis = models.BooleanField(default=False)
     socstrife = models.BooleanField(default=False)
     alcohol = models.BooleanField(default=False)
     violence = models.BooleanField(default=False)
     guns = models.BooleanField(default=False)
-    no_med = models.BooleanField(default=False)
-    majormed = models.BooleanField(default=False)
-    youthhealth = models.BooleanField(default=False)
+    used = models.BooleanField(default=False)
+
 

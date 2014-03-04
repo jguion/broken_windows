@@ -116,8 +116,8 @@
         var map_type = data.map_type
         var is_heatmap = map_type == 'heat_map';
         var is_markerclusterer = map_type == 'markerclusterer';
-        var is_circles = map_type == 'circles';
-        var is_addresses = data.granularity == "Address";
+        var show_addresses = data.show_addresses;
+        var is_addresses = data.granularity == "Address" && show_addresses;
         if(data.show_details || is_addresses){
           table_data.addColumn('date', 'Date');
           table_data.addColumn('string', 'Census '+data.granularity+' ID');
@@ -189,19 +189,19 @@
               ll = new google.maps.LatLng(info.latitude, info.longitude, true);
               //For Marker Clusterer
               if(is_markerclusterer || is_heatmap){
-                addMarker(ll, ""+info.date+ "<b> "+info.type +"</b>:<br/>"+info.address+": ("+info.areaid+")");
+                if(show_addresses){
+                  addMarker(ll, ""+info.date+ "<b> "+info.type +"</b>:<br/>"+info.address+": ("+info.areaid+")");
+                }else{
+                  addMarker(ll, ""+info.date+ "<b> "+info.type +"</b>");
+                }
                 if(is_addresses){
                   heatmapData.push({location: ll, weight: 1});
                 }
               }
 
-              if(data.is_default && info.address_latitude != null){
+              if(show_addresses && data.is_default && info.address_latitude != null){
                 ll2 = new google.maps.LatLng(info.address_latitude, info.address_longitude, true);
                 addAddressMarker(ll2, ""+info.date+ "<b> "+info.type +"</b>:<br/>"+info.address);
-              }
-
-              if(is_circles && is_addresses){
-                addCircle(ll, info);
               }
 
               //For table full of each incident 
@@ -225,9 +225,6 @@
                 w = (w / Math.log(info.popden));
               }
               heatmapData.push({location: ll, weight: w});
-            }
-            if(is_circles){
-              addCircle(ll, info);
             }
           }
           
@@ -300,30 +297,32 @@
           });
         }
 
-        old_zoom_level = map.zoom;
-        google.maps.event.addListener(map, 'zoom_changed', function () {
-              var z = map.zoom;
-              if(is_heatmap && old_zoom_level < 16 && z >= 16){
-                heatmap.setMap(null);
-                if(data.is_default){
-                  mc.clearMarkers();
+        if(show_addresses){
+          old_zoom_level = map.zoom;
+          google.maps.event.addListener(map, 'zoom_changed', function () {
+                var z = map.zoom;
+                if(is_heatmap && old_zoom_level < 16 && z >= 16){
+                  heatmap.setMap(null);
+                  if(data.is_default){
+                    mc.clearMarkers();
+                    mc.setStyles(default_cluster_styles); 
+                    mc.addMarkers(addressArray);
+                  }
                   mc.setStyles(default_cluster_styles); 
-                  mc.addMarkers(addressArray);
                 }
-                mc.setStyles(default_cluster_styles); 
-              }
-              else if(is_heatmap && old_zoom_level >= 16 && z < 16){
-                heatmap.setMap(map);
+                else if(is_heatmap && old_zoom_level >= 16 && z < 16){
+                  heatmap.setMap(map);
 
-                if(data.is_default){
-                  mc.clearMarkers();
+                  if(data.is_default){
+                    mc.clearMarkers();
+                    mc.setStyles(clusterStyles);
+                    mc.addMarkers(markersArray);
+                  }
                   mc.setStyles(clusterStyles);
-                  mc.addMarkers(markersArray);
                 }
-                mc.setStyles(clusterStyles);
-              }
-              old_zoom_level = z;
-          });
+                old_zoom_level = z;
+            });
+        }
 
         block_groups = new google.maps.KmlLayer({
             url:"https://sites.google.com/site/cityofbostondisorder/kml-files/bostonblockgroup.kml?attredirects=0&d=1",
@@ -341,20 +340,16 @@
             map: null});
       }
 
+      //radius for heatmap points
       var desiredRadiusPerPointInMeters = null;
-      var circleRadius = null;
       if(data.granularity == "Block"){
         desiredRadiusPerPointInMeters = 300;
-        circleRadius = 5
       }else if(data.granularity == "Block Group"){
         desiredRadiusPerPointInMeters = 500;
-        circleRadius = 8
       }else if(data.granularity == "Census Tract"){
         desiredRadiusPerPointInMeters = 1000;
-        circleRadius = 12
       }else{
         desiredRadiusPerPointInMeters = 200;
-        circleRadius = 1
       }
 
       $(function() {
@@ -364,19 +359,6 @@
       $(function() {
         $("#end_date").datepicker();
       });
-
-      function addCircle(location, info) {
-        desc = info.areaid +" , "+info.nsa_name+" : "+info.count
-        marker = new google.maps.Marker({
-          position: location,
-          icon: getCircle(info.count),
-          map: map,
-          title:desc
-        });
-        var fn = markerClickFunction(location,desc);
-        google.maps.event.addListener(marker, 'click', fn);
-        //markersArray.push(marker);
-      }
 
       function addMarker(location, desc, count) {
         marker = new google.maps.Marker({
@@ -400,35 +382,6 @@
         addressArray.push(marker);
       }
 
-      function getCircle(area_count) {
-        var color = "";
-        /**if(area_count < data.mean - data.std_dev){
-          color = "green"
-        }else if(area_count < data.mean){
-          color = "yellow"
-        }else if(area_count < data.mean + data.std_dev){
-          color = "orange"
-        }else{
-          color = "red"
-        }**/
-        if(area_count < data.lower_interquartile_range){
-          color = "green"
-        }else if(area_count < data.median){
-          color = "yellow"
-        }else if(area_count < data.upper_interquartile_range){
-          color = "orange"
-        }else{
-          color = "red"
-        }
-        var circle = {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: circleRadius,//Math.sqrt(area_count),//2 * Math.log(area_count),
-          fillColor:color,
-          fillOpacity:0.5,
-          strokeWeight:0
-        };
-        return circle;
-      }
 
       function markerClickFunction(location, desc){
         return function(e){
